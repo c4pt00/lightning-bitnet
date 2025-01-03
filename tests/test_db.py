@@ -14,9 +14,9 @@ import unittest
 
 
 @unittest.skipIf(TEST_NETWORK != 'regtest', "The DB migration is network specific due to the chain var.")
-def test_db_dangling_peer_fix(node_factory, bitcoind):
-    # Make sure bitcoind doesn't think it's going backwards
-    bitcoind.generate_block(104)
+def test_db_dangling_peer_fix(node_factory, bitnetd):
+    # Make sure bitnetd doesn't think it's going backwards
+    bitnetd.generate_block(104)
     # This was taken from test_fail_unconfirmed() node.
     l1 = node_factory.get_node(dbfile='dangling-peer.sqlite3.xz',
                                options={'database-upgrade': True})
@@ -34,7 +34,7 @@ def test_db_dangling_peer_fix(node_factory, bitcoind):
 
 
 @unittest.skipIf(TEST_NETWORK != 'regtest', "Address is network specific")
-def test_block_backfill(node_factory, bitcoind, chainparams):
+def test_block_backfill(node_factory, bitnetd, chainparams):
     """Test whether we backfill data from the blockchain correctly.
 
     For normal operation we will process any block after the initial start
@@ -60,21 +60,21 @@ def test_block_backfill(node_factory, bitcoind, chainparams):
 
     # Get some funds to l1
     addr = l1.rpc.newaddr()['bech32']
-    bitcoind.rpc.sendtoaddress(addr, 1)
-    bitcoind.generate_block(1)
+    bitnetd.rpc.sendtoaddress(addr, 1)
+    bitnetd.generate_block(1)
     wait_for(lambda: len(l1.rpc.listfunds()['outputs']) == 1)
 
     # Now send the needle we will go looking for later:
-    bitcoind.rpc.sendtoaddress('bcrt1qtwxd8wg5eanumk86vfeujvp48hfkgannf77evggzct048wggsrxsum2pmm', 0.00031337)
+    bitnetd.rpc.sendtoaddress('bcrt1qtwxd8wg5eanumk86vfeujvp48hfkgannf77evggzct048wggsrxsum2pmm', 0.00031337)
     l1.rpc.fundchannel(l2.info['id'], 10**6, announce=True)
-    wait_for(lambda: len(bitcoind.rpc.getrawmempool()) == 2)
+    wait_for(lambda: len(bitnetd.rpc.getrawmempool()) == 2)
 
     # Confirm and get some distance between the funding and the l3 wallet birth date
-    bitcoind.generate_block(100)
+    bitnetd.generate_block(100)
     wait_for(lambda: len(l1.rpc.listnodes()['nodes']) == 2)
 
     # Start the tester node, and connect it to l1. l0 should sync the gossip
-    # and call out to `bitcoind` to backfill the block.
+    # and call out to `bitnetd` to backfill the block.
     l3 = node_factory.get_node()
     heights = [r['height'] for r in l3.db_query("SELECT height FROM blocks")]
     assert(103 not in heights)
@@ -95,18 +95,18 @@ def test_block_backfill(node_factory, bitcoind, chainparams):
 
     # Now close the channel and make sure `l3` cleans up correctly:
     txid = only_one(l1.rpc.close(l2.info['id'])['txids'])
-    bitcoind.generate_block(13, wait_for_mempool=txid)
+    bitnetd.generate_block(13, wait_for_mempool=txid)
     wait_for(lambda: len(l3.rpc.listchannels()['channels']) == 0)
 
 
 # Test that the max-channel-id is set correctly between
 # restarts (with forgotten channel)
-def test_max_channel_id(node_factory, bitcoind):
+def test_max_channel_id(node_factory, bitnetd):
     # Create a channel between two peers.
     # Close the channel and have 100 blocks happen (forget channel)
     # Restart node, create channel again. Should succeed.
     l1, l2 = node_factory.line_graph(2, fundchannel=True, wait_for_announce=True)
-    sync_blockheight(bitcoind, [l1, l2])
+    sync_blockheight(bitnetd, [l1, l2])
 
     # Now shutdown cleanly.
     l1.rpc.close(l2.info['id'], 0)
@@ -118,7 +118,7 @@ def test_max_channel_id(node_factory, bitcoind):
     l1.wait_for_channel_onchain(l2.info['id'])
     l2.wait_for_channel_onchain(l1.info['id'])
 
-    bitcoind.generate_block(101)
+    bitnetd.generate_block(101)
     wait_for(lambda: l1.rpc.listpeerchannels()['channels'] == [])
     wait_for(lambda: l2.rpc.listpeerchannels()['channels'] == [])
 
@@ -136,8 +136,8 @@ def test_max_channel_id(node_factory, bitcoind):
 @unittest.skipIf(not COMPAT, "needs COMPAT to convert obsolete db")
 @unittest.skipIf(os.getenv('TEST_DB_PROVIDER', 'sqlite3') != 'sqlite3', "This test is based on a sqlite3 snapshot")
 @unittest.skipIf(TEST_NETWORK != 'regtest', "The network must match the DB snapshot")
-def test_scid_upgrade(node_factory, bitcoind):
-    bitcoind.generate_block(1)
+def test_scid_upgrade(node_factory, bitnetd):
+    bitnetd.generate_block(1)
 
     # Created through the power of sed "s/X'\([0-9]*\)78\([0-9]*\)78\([0-9]*\)'/X'\13A\23A\3'/"
     l1 = node_factory.get_node(dbfile='oldstyle-scids.sqlite3.xz',
@@ -167,8 +167,8 @@ def test_scid_upgrade(node_factory, bitcoind):
 @unittest.skipIf(not COMPAT, "needs COMPAT to convert obsolete db")
 @unittest.skipIf(os.getenv('TEST_DB_PROVIDER', 'sqlite3') != 'sqlite3', "This test is based on a sqlite3 snapshot")
 @unittest.skipIf(TEST_NETWORK != 'regtest', "The network must match the DB snapshot")
-def test_last_tx_inflight_psbt_upgrade(node_factory, bitcoind):
-    bitcoind.generate_block(12)
+def test_last_tx_inflight_psbt_upgrade(node_factory, bitnetd):
+    bitnetd.generate_block(12)
 
     # FIXME: Re-add dynamic checks once PSBTv2 support is in both Core/Elements, or get python support
     # These PSBTs were manually checked for 0.001 BTC multisig witness utxos in a single input
@@ -185,8 +185,8 @@ def test_last_tx_inflight_psbt_upgrade(node_factory, bitcoind):
 @unittest.skipIf(not COMPAT, "needs COMPAT to convert obsolete db")
 @unittest.skipIf(os.getenv('TEST_DB_PROVIDER', 'sqlite3') != 'sqlite3', "This test is based on a sqlite3 snapshot")
 @unittest.skipIf(TEST_NETWORK != 'regtest', "The network must match the DB snapshot")
-def test_last_tx_psbt_upgrade(node_factory, bitcoind):
-    bitcoind.generate_block(12)
+def test_last_tx_psbt_upgrade(node_factory, bitnetd):
+    bitnetd.generate_block(12)
 
     # FIXME: Re-add dynamic checks once PSBTv2 support is in both Core/Elements, or get python support
     # These PSBTs were manually checked for 0.01 BTC multisig witness utxos in a single input
@@ -206,7 +206,7 @@ def test_last_tx_psbt_upgrade(node_factory, bitcoind):
     l1.stop()
     # Test again, but this time with a database with a closed channel + forgotten peer
     # We need to get to block #232 from block #113
-    bitcoind.generate_block(232 - 113)
+    bitnetd.generate_block(232 - 113)
     # We need to give it a chance to update
     time.sleep(2)
 
@@ -219,14 +219,14 @@ def test_last_tx_psbt_upgrade(node_factory, bitcoind):
     # The first tx should be psbt, the second should still be hex (Newer Core version required for better error message)
     assert last_txs[0][:4] == b'psbt'
 
-    bitcoind.rpc.decoderawtransaction(last_txs[1].hex())
+    bitnetd.rpc.decoderawtransaction(last_txs[1].hex())
 
 
 @pytest.mark.slow_test
 @unittest.skipIf(os.getenv('TEST_DB_PROVIDER', 'sqlite3') != 'sqlite3', "This test is based on a sqlite3 snapshot")
 @unittest.skipIf(TEST_NETWORK != 'regtest', "The network must match the DB snapshot")
-def test_backfill_scriptpubkeys(node_factory, bitcoind):
-    bitcoind.generate_block(214)
+def test_backfill_scriptpubkeys(node_factory, bitnetd):
+    bitnetd.generate_block(214)
 
     script_map = [
         {
@@ -313,7 +313,7 @@ def test_backfill_scriptpubkeys(node_factory, bitcoind):
         assert _chan_id(row['txid'], row['funding_tx_outnum']) == row['cid'].lower()
 
 
-def test_optimistic_locking(node_factory, bitcoind):
+def test_optimistic_locking(node_factory, bitnetd):
     """Have a node run against a DB, then change it under its feet, crashing it.
 
     We start a node, wait for it to settle its write so we have a window where
@@ -321,7 +321,7 @@ def test_optimistic_locking(node_factory, bitcoind):
     """
     l1 = node_factory.get_node(may_fail=True, broken_log='lightningd:')
 
-    sync_blockheight(bitcoind, [l1])
+    sync_blockheight(bitnetd, [l1])
     l1.rpc.getinfo()
     time.sleep(1)
     l1.db.execute("UPDATE vars SET intval = intval + 1 WHERE name = 'data_version';")
@@ -358,7 +358,7 @@ def test_psql_key_value_dsn(node_factory, db_provider, monkeypatch):
     os.getenv('TEST_DB_PROVIDER', 'sqlite3') != 'sqlite3',
     "This test is based on a sqlite3 snapshot"
 )
-def test_local_basepoints_cache(bitcoind, node_factory):
+def test_local_basepoints_cache(bitnetd, node_factory):
     """XXX started caching the local basepoints as well as the remote ones.
 
     This tests that we can successfully migrate a DB from the
@@ -368,7 +368,7 @@ def test_local_basepoints_cache(bitcoind, node_factory):
 
     """
     # Reestablish the blockheight we had when generating the DB
-    bitcoind.generate_block(6)
+    bitnetd.generate_block(6)
     l1 = node_factory.get_node(
         dbfile='no-local-basepoints.sqlite3.xz',
         start=False,
@@ -413,7 +413,7 @@ def test_local_basepoints_cache(bitcoind, node_factory):
 
 
 @unittest.skipIf(os.getenv('TEST_DB_PROVIDER', 'sqlite3') != 'sqlite3', "Tests a feature unique to SQLITE3 backend")
-def test_sqlite3_builtin_backup(bitcoind, node_factory):
+def test_sqlite3_builtin_backup(bitnetd, node_factory):
     l1 = node_factory.get_node(start=False)
 
     # Figure out the path to the actual db.
@@ -427,8 +427,8 @@ def test_sqlite3_builtin_backup(bitcoind, node_factory):
 
     # Get an address and put some funds.
     addr = l1.rpc.newaddr()['bech32']
-    bitcoind.rpc.sendtoaddress(addr, 1)
-    bitcoind.generate_block(1)
+    bitnetd.rpc.sendtoaddress(addr, 1)
+    bitnetd.generate_block(1)
     wait_for(lambda: len(l1.rpc.listfunds()['outputs']) == 1)
 
     # Stop the node.
@@ -446,7 +446,7 @@ def test_sqlite3_builtin_backup(bitcoind, node_factory):
 
 
 @unittest.skipIf(os.getenv('TEST_DB_PROVIDER', 'sqlite3') != 'sqlite3', "Don't know how to swap dbs in Postgres")
-def test_db_sanity_checks(bitcoind, node_factory):
+def test_db_sanity_checks(bitnetd, node_factory):
     l1, l2 = node_factory.get_nodes(2, opts=[{'may_fail': True, 'broken_log': 'Wallet node_id does not match HSM|Wallet blockchain hash does not match network blockchain hash'}, {}])
 
     l1.stop()
@@ -474,7 +474,7 @@ def test_db_sanity_checks(bitcoind, node_factory):
 @unittest.skipIf(os.getenv('TEST_DB_PROVIDER', 'sqlite3') != 'sqlite3', "Canned db used")
 @unittest.skipIf(not COMPAT, "needs COMPAT to convert obsolete db")
 @unittest.skipIf(TEST_NETWORK != 'regtest', "The DB migration is network specific due to the chain var.")
-def test_db_forward_migrate(bitcoind, node_factory):
+def test_db_forward_migrate(bitnetd, node_factory):
     # For posterity, here is how I generated the db, in v0.12.1:
     # l1, l2, l3, l4, l5 = node_factory.get_nodes(5)
 
@@ -496,14 +496,14 @@ def test_db_forward_migrate(bitcoind, node_factory):
     # time.sleep(5)
     # l4.rpc.close(l1.info['id'])
     # l5.rpc.close(l1.info['id'])
-    # bitcoind.generate_block(100, wait_for_mempool=2)
+    # bitnetd.generate_block(100, wait_for_mempool=2)
     # l4.rpc.disconnect(l1.info['id'])
     # l5.rpc.disconnect(l1.info['id'])
 
     # wait_for(lambda: l1.rpc.listpeers(l4.info['id'])['peers'] == [])
     # wait_for(lambda: l1.rpc.listpeers(l5.info['id'])['peers'] == [])
     # assert False
-    bitcoind.generate_block(113)
+    bitnetd.generate_block(113)
     l1 = node_factory.get_node(dbfile='v0.12.1-forward.sqlite3.xz',
                                options={'database-upgrade': True})
 

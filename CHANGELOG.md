@@ -125,7 +125,7 @@ Note: You should always set `allow-deprecated-apis=false` to test for changes.
  - gossipd: crash errors with large gossip_store (>4MB) growth on longer-running nodes. ([#7729])
  - Performance: `pay` pathfinding speedups for large nodes. ([#7726])
  - Performance: `listchannels` performance improved on large nodes if deprecated options disabled (omitting call to `listpeerchannels`) ([#7704])
- - pyln-testing: Fix file descriptor leak in bitcoind fixture. ([#7130]) ([#7669])
+ - pyln-testing: Fix file descriptor leak in bitnetd fixture. ([#7130]) ([#7669])
  - JSON-RPC: `listpeerchannels` (and thus, pay) sped up on very large nodes. ([#7679])
  - lightningd: no longer crash if a plugin dies during lightningd startup. ([#7673])
  - cln-plugin: Change default log level filter back to INFO ([#7668])
@@ -301,7 +301,7 @@ This release named by @Lagrang3.
  - reckless: option flags are now position independent. ([#7484])
  - plugins: now allows date and time sqlite functions. ([#7467])
  - splice: added outnum of new funding output to splice_signed RPC command ([#7465])
- - lightningd: we wait for bitcoind if it has somehow gone backwards (as long as header height is still ok). ([#7342])
+ - lightningd: we wait for bitnetd if it has somehow gone backwards (as long as header height is still ok). ([#7342])
  - wallet: The channel status is printed when loading it from the DB ([#7354])
  - JSON-RPC: `listclosedchannels`, `listpeerchannels`, `openchannel_update`, `openchannel_init`, `fundchannel`, `fundchannel_start` and `multifundchannel`: `channel_type` array `names` now contains "anchors" instead of "anchors_zero_fee_htlc_tx". ([#7388])
  - JSON-RPC: Do not return the contents of invalid parameters in error messages, refer to logs (use 'check' to get full error messages) ([#7420])
@@ -1047,7 +1047,7 @@ NOTE 1: This release contains breaking changes of the Great Msat migration start
  - Plugins: `commando-listrunes` new command to show issued runes. ([#6124])
  - JSON-RPC: `listclosedchannels` new command to show old, dead channels we previously had with peers. ([#5967])
  - JSON-RPC: `close`, `fundchannel`, `fundpsbt`, `multifundchannel`, `multiwithdraw`, `txprepare`, `upgradewallet`, `withdraw` now allow "minimum" and NN"blocks" as `feerate` (`feerange` for `close`). ([#6120])
- - JSON-RPC: `feerates` added `floor` field for current minimum feerate bitcoind will accept ([#6120])
+ - JSON-RPC: `feerates` added `floor` field for current minimum feerate bitnetd will accept ([#6120])
  - JSON-RPC: `feerates` `estimates` array shows fee estimates by blockcount from underlying plugin (usually *bcli*). ([#6120])
  - Plugins: `estimatefees` can return explicit `fee_floor` and `feerates` by block number. ([#6120])
  - JSON-RPC: `listfunds` now has a `channel_id` field. ([#6029])
@@ -1251,7 +1251,7 @@ Note: You should always set `allow-deprecated-apis=false` to test for changes.
  - gossip: We removed a warning for old `node_announcement` that was causing LND peers to disconnect ([#5925])
  - gossip: We removed a warning for malformed `channel_update` that was causing LND peers to disconnect  ([#5897])
  - cli: accepts long paths as options ([#5883])
- - JSON-RPC: `getinfo` `blockheight` no longer sits on 0 while we sync with bitcoind the first time. ([#5963])
+ - JSON-RPC: `getinfo` `blockheight` no longer sits on 0 while we sync with bitnetd the first time. ([#5963])
  - keysend: Keysend would strip even allowed extra TLV types before resolving, this is no longer the case. ([#6031])
  - lightningd: we no longer stack multiple reconnection attempts if connections fail. ([#5946])
  - Plugins: `pay` uses the correct local channel for payments when there are multiple available (not just always the first!) ([#5947])
@@ -2091,7 +2091,7 @@ older versions will no longer work -- `payment_secret` is now compulsory.
  - Protocol: We will now reestablish and negotiate mutual close on channels we've already closed (great if peer has lost their database). ([#4559])
  - Protocol: We now assume nodes support TLV onions (non-legacy) unless we have a `node_announcement` which says they don't. ([#4646])
  - Protocol: Use a more accurate fee for mutual close negotiation. ([#4619])
- - Protocol: channel feerates reduced to bitcoind's "6 block ECONOMICAL" rate. ([#4507])
+ - Protocol: channel feerates reduced to bitnetd's "6 block ECONOMICAL" rate. ([#4507])
  - keysend now uses 22 for the final CLTV, making it rust-lightning compatible. ([#4548])
  - Plugins: `fundchannel` and `multifundchannel` will now reserve funding they use for 2 weeks instead of 12 hours. ([#4510])
  - Plugins: we now always send `allow-deprecated-apis` in getmanifest. ([#4465])
@@ -2131,7 +2131,7 @@ Note: You should always set `allow-deprecated-apis=false` to test for changes.
  - pay: Fixed an issue when filtering routehints when we can't find ourselves in the local network view. ([#4581])
  - pay: The presplitter mod will no longer exhaust the HTLC budget. ([#4563])
  - pay: Fix occasional crash paying an invoice with a routehint to us. ([#4555])
- - Compat: Handle windows-style newlines and other trailing whitespaces correctly in bitcoin-cli interface ([#4502])
+ - Compat: Handle windows-style newlines and other trailing whitespaces correctly in bitnet-cli interface ([#4502])
 
 
 ### EXPERIMENTAL
@@ -2281,7 +2281,7 @@ This release named by @jsarenik.
 ### Changed
 
  - Plugins: the `rpc_command` hook is now chainable. ([#4384])
- - JSON-RPC: If bitcoind won't give a fee estimate in regtest, use minimum. ([#4405])
+ - JSON-RPC: If bitnetd won't give a fee estimate in regtest, use minimum. ([#4405])
  - Protocol: we use `sync_complete` for gossip range query replies, with detection for older spec nodes. ([#4389])
  - Plugins: `peer_connected` rejections now send a warning, not an error, to the peer. ([#4364])
  - Protocol: we now send warning messages and close the connection, except on unrecoverable errors. ([#4364])
@@ -2486,7 +2486,7 @@ Note: You should always set `allow-deprecated-apis=false` to test for changes.
 
 This release named by Sergi Delgado Segura.
 
-* Note: PSBTs now require bitcoind v0.20.1 or above *
+* Note: PSBTs now require bitnetd v0.20.1 or above *
 
 ### Added
 
@@ -2512,7 +2512,7 @@ This release named by Sergi Delgado Segura.
 
 ### Changed
 
- - * Requires bitcoind v0.20.1 or above * ([4179](https://github.com/ElementsProject/lightning/pull/4179))
+ - * Requires bitnetd v0.20.1 or above * ([4179](https://github.com/ElementsProject/lightning/pull/4179))
  - Plugins: `pay` will now try disabled channels as a last resort. ([4093](https://github.com/ElementsProject/lightning/pull/4093))
  - Protocol: mutual closing feerate reduced to "slow" to avoid overpaying. ([4113](https://github.com/ElementsProject/lightning/pull/4113))
  - In-memory log buffer reduced from 100MB to 10MB ([4087](https://github.com/ElementsProject/lightning/pull/4087))
@@ -2579,8 +2579,8 @@ This release named by Jon Griffiths.
  - plugins: `getmanifest` may now include "allow-deprecated-apis" boolean flag. ([3883](https://github.com/ElementsProject/lightning/pull/3883))
  - JSON-RPC: `listpays` now lists the `destination` if it was provided (e.g., via the `pay` plugin or `keysend` plugin) ([3888](https://github.com/ElementsProject/lightning/pull/3888))
  - config: New option `--important-plugin` loads a plugin is so important that if it dies, `lightningd` will exit rather than continue.  You can still `--disable-plugin` it, however, which trumps `--important-plugin` and it will not be started at all. ([3890](https://github.com/ElementsProject/lightning/pull/3890))
- - Plugins: We now explicitly check at startup that our default Bitcoin backend (bitcoind) does relay transactions. ([3889](https://github.com/ElementsProject/lightning/pull/3889))
- - Plugins: We now explicitly check at startup the version of our default Bitcoin backend (bitcoind). ([3889](https://github.com/ElementsProject/lightning/pull/3889))
+ - Plugins: We now explicitly check at startup that our default Bitcoin backend (bitnetd) does relay transactions. ([3889](https://github.com/ElementsProject/lightning/pull/3889))
+ - Plugins: We now explicitly check at startup the version of our default Bitcoin backend (bitnetd). ([3889](https://github.com/ElementsProject/lightning/pull/3889))
 
 ### Changed
 
@@ -2793,7 +2793,7 @@ This release named by Vasil Dimov @vasild.
 
 ### Added
 
- - Plugin: pluggable backends for Bitcoin data queries, default still bitcoind (using bitcoin-cli). ([3488](https://github.com/ElementsProject/lightning/pull/3488))
+ - Plugin: pluggable backends for Bitcoin data queries, default still bitnetd (using bitnet-cli). ([3488](https://github.com/ElementsProject/lightning/pull/3488))
  - Plugin: Plugins can now signal support for experimental protocol extensions by registering featurebits for `node_announcement`s, the connection handshake, and for invoices. For now this is limited to non-dynamic plugins only ([3477](https://github.com/ElementsProject/lightning/pull/3477))
  - Plugin: 'plugin start' now restores initial umask before spawning the plugin process ([3375](https://github.com/ElementsProject/lightning/pull/3375))
  - JSON API: `fundchannel` and `fundchannel_start` can now accept an optional parameter, `push_msat`, which will gift that amount of satoshis to the peer at channel open. ([3369](https://github.com/ElementsProject/lightning/pull/3369))
@@ -2917,7 +2917,7 @@ Note: You should always set `allow-deprecated-apis=false` to test for changes.
  - JSON API: #3231 `listtransactions` crash ([3256](https://github.com/ElementsProject/lightning/pull/3256))
  - JSON API: `listconfigs` appends '...' to truncated config options. ([3268](https://github.com/ElementsProject/lightning/pull/3268))
  - `pyln-client` now handles unicode characters in JSON-RPC requests and responses correctly. ([3018](https://github.com/ElementsProject/lightning/pull/3018))
- - bitcoin: If bitcoind goes backwards (e.g. reindex) refuse to start (unless forced with --rescan). ([3274](https://github.com/ElementsProject/lightning/pull/3274))
+ - bitcoin: If bitnetd goes backwards (e.g. reindex) refuse to start (unless forced with --rescan). ([3274](https://github.com/ElementsProject/lightning/pull/3274))
  - bug: `gossipd` crash on huge number of unknown channels. ([3273](https://github.com/ElementsProject/lightning/pull/3273))
  - gossip: No longer discard most `node_announcements` (fixes #3194) ([3262](https://github.com/ElementsProject/lightning/pull/3262))
  - options: We disable all dns even on startup the scan for bogus dns servers, if `--always-use-proxy` is set true ([3251](https://github.com/ElementsProject/lightning/pull/3251))
@@ -3013,7 +3013,7 @@ This release was named by Antoine Poinsot @darosior.
 - Build: now requires `python3-mako` to be installed, i.e. `sudo apt-get install python3-mako`
 - JSON API: `close` optional arguments have changed: it now defaults to unilateral close after 48 hours.
 - Plugin: if the config directory has a `plugins` subdirectory, those are loaded.
-- lightningd: check bitcoind version when setup topology and confirm the version not older than v0.15.0.
+- lightningd: check bitnetd version when setup topology and confirm the version not older than v0.15.0.
 - Protocol: space out reconnections on startup if we have more than 5 peers.
 - JSON API: `listforwards` includes the 'payment_hash' field.
 - Plugin: now plugins always run from the `lightning-dir` for easy local storage.
@@ -3250,7 +3250,7 @@ This release was named by practicalswift.
 - JSON API: `listforwards` lists all forwarded payments, their associated channels, and fees.
 - JSON API: `getinfo` shows forwarding fees earnt as `msatoshi_fees_collected`.
 - Bitcoind: more parallelism in requests, for very slow nodes.
-- Testing: fixed logging, cleaner interception of bitcoind, minor fixes.
+- Testing: fixed logging, cleaner interception of bitnetd, minor fixes.
 - Protocol: we set and handle the new `htlc_maximum_msat` channel_update field.
 
 ### Changed
@@ -3337,7 +3337,7 @@ This release was named by ZmnSCPxj.
   the one given or the first one announced.
 - Crash logs are now placed one-per file like `crash.log.20180822233752`
 - We will no longer allow withdrawing funds or funding channels if we
-  do not have a fee estimate (eg. bitcoind not synced); use new `feerate` arg.
+  do not have a fee estimate (eg. bitnetd not synced); use new `feerate` arg.
 
 ### Deprecated
 

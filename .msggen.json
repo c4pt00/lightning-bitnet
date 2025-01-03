@@ -1722,7 +1722,7 @@
             "Getinfo.num_pending_channels": 5,
             "Getinfo.our_features": 10,
             "Getinfo.version": 8,
-            "Getinfo.warning_bitcoind_sync": 16,
+            "Getinfo.warning_bitnetd_sync": 16,
             "Getinfo.warning_lightningd_sync": 17
         },
         "GetlogLog": {
@@ -7485,7 +7485,7 @@
             "added": "pre-v0.10.1",
             "deprecated": null
         },
-        "Getinfo.warning_bitcoind_sync": {
+        "Getinfo.warning_bitnetd_sync": {
             "added": "pre-v0.10.1",
             "deprecated": null
         },

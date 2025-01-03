@@ -168,7 +168,7 @@ message GetinfoResponse {
 	Amount fees_collected_msat = 13;
 	repeated GetinfoAddress address = 14;
 	repeated GetinfoBinding binding = 15;
-	optional string warning_bitcoind_sync = 16;
+	optional string warning_bitnetd_sync = 16;
 	optional string warning_lightningd_sync = 17;
 }
 

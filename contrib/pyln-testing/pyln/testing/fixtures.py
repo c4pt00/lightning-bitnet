@@ -125,46 +125,46 @@ def node_cls():
 
 
 @pytest.fixture
-def bitcoind(directory, teardown_checks):
+def bitnetd(directory, teardown_checks):
     chaind = network_daemons[env('TEST_NETWORK', 'regtest')]
-    bitcoind = chaind(bitcoin_dir=directory)
+    bitnetd = chaind(bitcoin_dir=directory)
 
     try:
-        bitcoind.start()
+        bitnetd.start()
     except Exception:
-        bitcoind.stop()
+        bitnetd.stop()
         raise
 
-    info = bitcoind.rpc.getnetworkinfo()
+    info = bitnetd.rpc.getnetworkinfo()
 
     # FIXME: include liquid-regtest in this check after elementsd has been
     # updated
     if info['version'] < 200100 and env('TEST_NETWORK') != 'liquid-regtest':
-        bitcoind.rpc.stop()
-        raise ValueError("bitcoind is too old. At least version 20100 (v0.20.1)"
+        bitnetd.rpc.stop()
+        raise ValueError("bitnetd is too old. At least version 20100 (v0.20.1)"
                          " is needed, current version is {}".format(info['version']))
     elif info['version'] < 160000:
-        bitcoind.rpc.stop()
+        bitnetd.rpc.stop()
         raise ValueError("elementsd is too old. At least version 160000 (v0.16.0)"
                          " is needed, current version is {}".format(info['version']))
 
-    info = bitcoind.rpc.getblockchaininfo()
+    info = bitnetd.rpc.getblockchaininfo()
     # Make sure we have some spendable funds
     if info['blocks'] < 101:
-        bitcoind.generate_block(101 - info['blocks'])
-    elif bitcoind.rpc.getwalletinfo()['balance'] < 1:
+        bitnetd.generate_block(101 - info['blocks'])
+    elif bitnetd.rpc.getwalletinfo()['balance'] < 1:
         logging.debug("Insufficient balance, generating 1 block")
-        bitcoind.generate_block(1)
+        bitnetd.generate_block(1)
 
-    yield bitcoind
+    yield bitnetd
 
     try:
-        bitcoind.stop()
+        bitnetd.stop()
     except Exception:
-        bitcoind.proc.kill()
-    bitcoind.proc.wait()
+        bitnetd.proc.kill()
+    bitnetd.proc.wait()
 
-    bitcoind.cleanup_files()
+    bitnetd.cleanup_files()
 
 
 class TeardownErrors(object):
@@ -466,11 +466,11 @@ def jsonschemas():
 
 
 @pytest.fixture
-def node_factory(request, directory, test_name, bitcoind, executor, db_provider, teardown_checks, node_cls, jsonschemas):
+def node_factory(request, directory, test_name, bitnetd, executor, db_provider, teardown_checks, node_cls, jsonschemas):
     nf = NodeFactory(
         request,
         test_name,
-        bitcoind,
+        bitnetd,
         executor,
         directory=directory,
         db_provider=db_provider,

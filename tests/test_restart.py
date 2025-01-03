@@ -9,7 +9,7 @@ from utils import (
 @pytest.mark.openchannel('v1')
 @pytest.mark.openchannel('v2')
 @unittest.skipIf(TEST_NETWORK != 'regtest', 'elementsd doesnt yet support PSBT features we need')
-def test_agressive_restart(node_factory, bitcoind):
+def test_agressive_restart(node_factory, bitnetd):
     l1, l2 = node_factory.line_graph(2, fundamount=1000000, wait_for_announce=True, opts={'experimental-splicing': None})
 
     chan_id = l1.get_channel_id(l2)

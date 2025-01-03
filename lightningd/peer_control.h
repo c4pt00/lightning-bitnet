@@ -110,7 +110,7 @@ void setup_peers(struct lightningd *ld);
 /* When database first writes peer into db, it sets the dbid */
 void peer_set_dbid(struct peer *peer, u64 dbid);
 
-/* At startup, re-send any transactions we want bitcoind to have */
+/* At startup, re-send any transactions we want bitnetd to have */
 void resend_closing_transactions(struct lightningd *ld);
 
 /* Initiate the close of a channel, maybe broadcast.  If we've seen a

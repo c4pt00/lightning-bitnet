@@ -7,15 +7,15 @@ updatedAt: "2023-02-21T13:30:53.906Z"
 ---
 # Using a pruned Bitcoin Core node
 
-Core Lightning requires JSON-RPC access to a fully synchronized `bitcoind` in order to synchronize with the Bitcoin network.
+Core Lightning requires JSON-RPC access to a fully synchronized `bitnetd` in order to synchronize with the Bitcoin network.
 
-Access to ZeroMQ is not required and `bitcoind` does not need to be run with `txindex` like other implementations.
+Access to ZeroMQ is not required and `bitnetd` does not need to be run with `txindex` like other implementations.
 
-The lightning daemon will poll `bitcoind` for new blocks that it hasn't processed yet, thus synchronizing itself with `bitcoind`.
+The lightning daemon will poll `bitnetd` for new blocks that it hasn't processed yet, thus synchronizing itself with `bitnetd`.
 
-If `bitcoind` prunes a block that Core Lightning has not processed yet, e.g., Core Lightning was not running for a prolonged period, then `bitcoind` will not be able to serve the missing blocks, hence Core Lightning will not be able to synchronize anymore and will be stuck.
+If `bitnetd` prunes a block that Core Lightning has not processed yet, e.g., Core Lightning was not running for a prolonged period, then `bitnetd` will not be able to serve the missing blocks, hence Core Lightning will not be able to synchronize anymore and will be stuck.
 
-In order to avoid this situation you should be monitoring the gap between Core Lightning's blockheight using `[lightning-cli](ref:lightning-cli) getinfo` and `bitcoind`'s blockheight using `bitcoin-cli getblockchaininfo`. If the two blockheights drift apart it might be necessary to intervene.
+In order to avoid this situation you should be monitoring the gap between Core Lightning's blockheight using `[lightning-cli](ref:lightning-cli) getinfo` and `bitnetd`'s blockheight using `bitnet-cli getblockchaininfo`. If the two blockheights drift apart it might be necessary to intervene.
 
 # Connecting to Bitcoin Core remotely
 

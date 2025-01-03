@@ -153,7 +153,7 @@ def test_invoice_preimage(node_factory):
 
 
 @unittest.skipIf(TEST_NETWORK != 'regtest', "Amounts too low, dominated by fees in elements")
-def test_invoice_routeboost(node_factory, bitcoind):
+def test_invoice_routeboost(node_factory, bitnetd):
     """Test routeboost 'r' hint in bolt11 invoice.
     """
     l1, l2, l3 = node_factory.line_graph(3, fundamount=2 * (10**5), wait_for_announce=True)
@@ -202,7 +202,7 @@ def test_invoice_routeboost(node_factory, bitcoind):
     # Close l1, l3 will not use l2 at all.
     l1.rpc.close(l2.info['id'])
     l1.wait_for_channel_onchain(l2.info['id'])
-    bitcoind.generate_block(100)
+    bitnetd.generate_block(100)
 
     # l3 has to notice channel is gone.
     wait_for(lambda: len(l3.rpc.listchannels()['channels']) == 2)
@@ -215,7 +215,7 @@ def test_invoice_routeboost(node_factory, bitcoind):
     assert 'warning_mpp' not in inv
 
 
-def test_invoice_routeboost_private(node_factory, bitcoind):
+def test_invoice_routeboost_private(node_factory, bitnetd):
     """Test routeboost 'r' hint in bolt11 invoice for private channels
     """
     l1, l2, l3 = node_factory.get_nodes(3)
@@ -227,7 +227,7 @@ def test_invoice_routeboost_private(node_factory, bitcoind):
     l0 = node_factory.get_node()
     l0.rpc.connect(l1.info['id'], 'localhost', l1.port)
     scid_dummy, _ = l0.fundchannel(l1, 2 * (10**5))
-    mine_funding_to_announce(bitcoind, [l0, l1, l2, l3])
+    mine_funding_to_announce(bitnetd, [l0, l1, l2, l3])
 
     # Make sure channel is totally public.
     wait_for(lambda: [c['public'] for c in l2.rpc.listchannels(scid_dummy)['channels']] == [True, True])
@@ -294,7 +294,7 @@ def test_invoice_routeboost_private(node_factory, bitcoind):
     # the exposure of private channels.
     l3.rpc.connect(l2.info['id'], 'localhost', l2.port)
     scid2, _ = l3.fundchannel(l2, (10**5))
-    mine_funding_to_announce(bitcoind, [l0, l1, l2, l3])
+    mine_funding_to_announce(bitnetd, [l0, l1, l2, l3])
 
     # Make sure channel is totally public.
     wait_for(lambda: [c['public'] for c in l2.rpc.listchannels(scid2)['channels']] == [True, True])
@@ -362,7 +362,7 @@ def test_invoice_routeboost_private(node_factory, bitcoind):
     # It will use an explicit exposeprivatechannels even if it thinks its a dead-end
     l0.rpc.close(l1.info['id'])
     l0.wait_for_channel_onchain(l1.info['id'])
-    bitcoind.generate_block(13)
+    bitnetd.generate_block(13)
     wait_for(lambda: l2.rpc.listchannels(scid_dummy)['channels'] == [])
 
     inv = l2.rpc.invoice(amount_msat=123456, label="inv7", description="?", exposeprivatechannels=scid)
@@ -862,7 +862,7 @@ def test_listinvoices_index(node_factory, executor):
         assert only_one(l2.rpc.listinvoices(index='updated', start=i, limit=1)['invoices'])['label'] == str(70 + 1 - i)
 
 
-def test_unified_invoices(node_factory, executor, bitcoind):
+def test_unified_invoices(node_factory, executor, bitnetd):
     l1, l2 = node_factory.line_graph(2, opts={'invoices-onchain-fallback': None})
     amount_sat = 1000
     inv = l1.rpc.invoice(amount_sat * 1000, "inv1", "test_unified_invoices")
@@ -874,17 +874,17 @@ def test_unified_invoices(node_factory, executor, bitcoind):
     addr = b11['fallbacks'][0]['addr']
 
     # save txid
-    txid = bitcoind.rpc.sendtoaddress(addr, amount_sat / 10**8)
+    txid = bitnetd.rpc.sendtoaddress(addr, amount_sat / 10**8)
 
     # confirm spend
-    bitcoind.generate_block(1)
+    bitnetd.generate_block(1)
 
     res = l1.rpc.waitinvoice('inv1')
 
     assert(txid == res['paid_outpoint']['txid'])
 
 
-def test_expiry_startup_crash(node_factory, bitcoind):
+def test_expiry_startup_crash(node_factory, bitnetd):
     """We crash trying to expire invoice on startup"""
     l1 = node_factory.get_node()
 
@@ -912,9 +912,9 @@ def test_expiry_startup_crash(node_factory, bitcoind):
 
 @unittest.skipIf(TEST_NETWORK != 'regtest', "The DB migration is network specific due to the chain var.")
 @unittest.skipIf(os.getenv('TEST_DB_PROVIDER', 'sqlite3') != 'sqlite3', "This test is based on a sqlite3 snapshot")
-def test_invoices_wait_db_migration(node_factory, bitcoind):
+def test_invoices_wait_db_migration(node_factory, bitnetd):
     """Canned db is from v23.02.2's test_invoice_routeboost_private l2"""
-    bitcoind.generate_block(28)
+    bitnetd.generate_block(28)
     l2 = node_factory.get_node(node_id=2,
                                dbfile='invoices_pre_waitindex.sqlite3.xz',
                                options={'database-upgrade': True})

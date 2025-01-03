@@ -10,7 +10,7 @@ updatedAt: "2023-02-21T13:49:20.132Z"
 
 #### Regtest (local, fast-start) option
 
-If you want to experiment with `lightningd`, there's a script to set up a `bitcoind` regtest test network of two local lightning nodes, which provides a convenient `start_ln` helper. See the notes at the top of the `startup_regtest.sh` file for details on how to use it.
+If you want to experiment with `lightningd`, there's a script to set up a `bitnetd` regtest test network of two local lightning nodes, which provides a convenient `start_ln` helper. See the notes at the top of the `startup_regtest.sh` file for details on how to use it.
 
 ```bash
 . contrib/startup_regtest.sh
@@ -18,13 +18,13 @@ If you want to experiment with `lightningd`, there's a script to set up a `bitco
 
 #### Mainnet Option
 
-To test with real bitcoin,  you will need to have a local `bitcoind` node running:
+To test with real bitcoin,  you will need to have a local `bitnetd` node running:
 
 ```bash
-bitcoind -daemon
+bitnetd -daemon
 ```
 
-Wait until `bitcoind` has synchronized with the network.
+Wait until `bitnetd` has synchronized with the network.
 
 Make sure that you do not have `walletbroadcast=0` in your `~/.bitcoin/bitcoin.conf`, or you may run into trouble.  
 Notice that running `lightningd` against a pruned node may cause some issues if not managed carefully, see [pruning](doc:bitcoin-core##using-a-pruned-bitcoin-core-node) for more information.

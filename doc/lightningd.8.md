@@ -62,7 +62,7 @@ the default *$HOME/.lightning*. Then create a *config* file in this
 directory containing your configuration.
 
 Your other main preparation would be to set up a mainnet Bitcoin
-fullnode, i.e. run a bitcoind(1) instance. The rest of this quick start
+fullnode, i.e. run a bitnetd(1) instance. The rest of this quick start
 guide will assume you are reckless and want to spend real funds on
 Lightning: otherwise indicate *network=testnet* in your *config* file explicitly.
 
@@ -76,7 +76,7 @@ indicate it using *log-file=lightningd.log* in your *config* file. You
 might be interested in viewing it periodically as you follow along on
 this guide.
 
-Once the **bitcoind** instance is running, start lightningd(8):
+Once the **bitnetd** instance is running, start lightningd(8):
 
     $ lightningd --lightning-dir=$HOME/.lightning --daemon
 
@@ -91,13 +91,13 @@ Check if things are working:
 The **getinfo** command in particular will return a *blockheight* field,
 which indicates the block height to which **lightningd** has been
 synchronized to (this is separate from the block height that your
-**bitcoind** has been synchronized to, and will always lag behind
-**bitcoind**). You will have to wait until the *blockheight* has reached
+**bitnetd** has been synchronized to, and will always lag behind
+**bitnetd**). You will have to wait until the *blockheight* has reached
 the actual blockheight of the Bitcoin network.
 
 Before you can get funds offchain, you need to have some funds onchain
 owned by **lightningd** (which has a separate wallet from the
-**bitcoind** it connects to). Get an address for **lightningd** via
+**bitnetd** it connects to). Get an address for **lightningd** via
 lightning-newaddr(7) command as below (*--lightning-dir* option has been
 elided, specify it if you selected your own *lightning-dir*):
 

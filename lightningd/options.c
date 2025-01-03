@@ -850,7 +850,7 @@ static void dev_register_opts(struct lightningd *ld)
 		     opt_set_bool,
 		     &ld->dev_allow_localhost,
 		     "Announce and allow announcments for localhost address");
-	clnopt_witharg("--dev-bitcoind-poll", OPT_DEV|OPT_SHOWINT,
+	clnopt_witharg("--dev-bitnetd-poll", OPT_DEV|OPT_SHOWINT,
 		       opt_set_u32, opt_show_u32,
 		       &ld->topology->poll_seconds,
 		       "Time between polling for new transactions");

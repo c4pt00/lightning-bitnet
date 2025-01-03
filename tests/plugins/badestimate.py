@@ -10,7 +10,7 @@ plugin = Plugin()
 
 
 network = os.environ.get("TEST_NETWORK", "regtest")
-cli = "bitcoin-cli" if network == "regtest" else "elements-cli"
+cli = "bitnet-cli" if network == "regtest" else "elements-cli"
 
 
 def bcli(plugin, cmd):

@@ -28,17 +28,25 @@ static u8 liquid_regtest_fee_asset[] = {
 
 const struct chainparams networks[] = {
     {.network_name = "bitcoin",
-     .onchain_hrp = "bc",
-     .lightning_hrp = "bc",
+     .onchain_hrp = "bit",
+     .lightning_hrp = "bit",
      .bip70_name = "main",
-     .genesis_blockhash = {{{.u.u8 = {0x6f, 0xe2, 0x8c, 0x0a, 0xb6, 0xf1, 0xb3,
+/*     .genesis_blockhash = {{{.u.u8 = {0x6f, 0xe2, 0x8c, 0x0a, 0xb6, 0xf1, 0xb3,
 				      0x72, 0xc1, 0xa6, 0xa2, 0x46, 0xae, 0x63,
 				      0xf7, 0x4f, 0x93, 0x1e, 0x83, 0x65, 0xe1,
 				      0x5a, 0x08, 0x9c, 0x68, 0xd6, 0x19, 0x00,
 				      0x00, 0x00, 0x00, 0x00}}}},
-     .rpc_port = 8332,
+*/
+.genesis_blockhash = {{{.u.u8 =   {0x3c, 0xb7, 0xd4, 0xf8, 0x4c, 0xcb, 0x28, 
+                                        0x56, 0x27, 0x2a, 0x43, 0x6e, 0x09, 0x4c, 
+                                        0xa5, 0x33, 0x4b, 0xad, 0xce, 0xb7, 0xf2, 
+                                        0x7a, 0x92, 0x2f, 0x51, 0x14, 0x92, 0xf1, 
+                                        0xaf, 0x0c, 0x00, 0x00}}}},
+
+
+     .rpc_port = 9332,
      .ln_port = 9735,
-     .cli = "bitcoin-cli",
+     .cli = "bitnet-cli",
      .cli_args = NULL,
      .cli_min_supported_version = 150000,
      .dust_limit = { 546 },
@@ -46,15 +54,15 @@ const struct chainparams networks[] = {
       *
       * The sending node:
       *...
-      *   - MUST set `funding_satoshis` to less than 2^24 satoshi.
+      *   - MUST set `funding_satoshis` to less than 2^31 satoshi.
       */
-     .max_funding = AMOUNT_SAT_INIT((1 << 24) - 1),
+     .max_funding = AMOUNT_SAT_INIT((1 << 30) - 1),
      .max_payment = AMOUNT_MSAT_INIT(0xFFFFFFFFULL),
-     .max_supply = AMOUNT_SAT_INIT(2100000000000000),
+     .max_supply = AMOUNT_SAT_INIT(200000000000000000),
      /* "Lightning Charge Powers Developers & Blockstream Store" */
      .when_lightning_became_cool = 504500,
-     .p2pkh_version = 0,
-     .p2sh_version = 5,
+     .p2pkh_version = 25,
+     .p2sh_version = 22,
      .testnet = false,
      .fee_asset_tag = NULL,
      .bip32_key_version = {.bip32_pubkey_version = BIP32_VER_MAIN_PUBLIC,
@@ -71,7 +79,7 @@ const struct chainparams networks[] = {
 				      0xf1, 0x88, 0x91, 0x0f}}}},
      .rpc_port = 18443,
      .ln_port = 19846,
-     .cli = "bitcoin-cli",
+     .cli = "bitnet-cli",
      .cli_args = "-regtest",
      .cli_min_supported_version = 150000,
      .dust_limit = { 546 },
@@ -98,7 +106,7 @@ const struct chainparams networks[] = {
 				      0x08, 0x00, 0x00, 0x00}}}},
      .rpc_port = 38332,
      .ln_port = 39735,
-     .cli = "bitcoin-cli",
+     .cli = "bitnet-cli",
      .cli_args = "-signet",
      .cli_min_supported_version = 150000,
      .dust_limit = { 546 },
@@ -123,7 +131,7 @@ const struct chainparams networks[] = {
 				      0x00, 0x00, 0x00, 0x00}}}},
      .rpc_port = 18332,
      .ln_port = 19735,
-     .cli = "bitcoin-cli",
+     .cli = "bitnet-cli",
      .cli_args = "-testnet",
      .cli_min_supported_version = 150000,
      .dust_limit = { 546 },

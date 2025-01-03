@@ -9,8 +9,8 @@
 
 [Unit]
 Description=Core Lightning daemon
-Requires=bitcoind.service
-After=bitcoind.service
+Requires=bitnetd.service
+After=bitnetd.service
 Wants=network-online.target
 After=network-online.target
 

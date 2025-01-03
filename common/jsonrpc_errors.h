@@ -91,7 +91,7 @@ enum jsonrpc_errcode {
 	CONNECT_ALL_ADDRESSES_FAILED = 401,
 	CONNECT_DISCONNECTED_DURING = 402,
 
-	/* bitcoin-cli plugin errors */
+	/* bitnet-cli plugin errors */
 	BCLI_ERROR = 500,
 	BCLI_NO_FEE_ESTIMATES = 501,
 

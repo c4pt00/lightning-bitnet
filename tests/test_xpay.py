@@ -212,7 +212,7 @@ def test_xpay_selfpay(node_factory):
 
 @pytest.mark.slow_test
 @unittest.skipIf(TEST_NETWORK != 'regtest', '29-way split for node 17 is too dusty on elements')
-def test_xpay_fake_channeld(node_factory, bitcoind, chainparams):
+def test_xpay_fake_channeld(node_factory, bitnetd, chainparams):
     outfile = tempfile.NamedTemporaryFile(prefix='gossip-store-')
     nodeids = subprocess.check_output(['devtools/gossmap-compress',
                                        'decompress',
@@ -498,7 +498,7 @@ def test_xpay_preapprove(node_factory):
 
 
 @unittest.skipIf(TEST_NETWORK != 'regtest', 'too dusty on elements')
-def test_xpay_maxfee(node_factory, bitcoind, chainparams):
+def test_xpay_maxfee(node_factory, bitnetd, chainparams):
     """Test which shows that we don't excees maxfee"""
     outfile = tempfile.NamedTemporaryFile(prefix='gossip-store-')
     subprocess.check_output(['devtools/gossmap-compress',

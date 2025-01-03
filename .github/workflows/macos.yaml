@@ -10,14 +10,14 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        bitcoind-version: ["27.1"]
+        bitnetd-version: ["27.1"]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download Bitcoin ${{ matrix.bitcoind-version }} & install binaries
+      - name: Download Bitcoin ${{ matrix.bitnetd-version }} & install binaries
         run: |
-          export BITCOIND_VERSION=${{ matrix.bitcoind-version }}
+          export BITCOIND_VERSION=${{ matrix.bitnetd-version }}
           export TARGET_ARCH="arm64-apple-darwin"
 
           wget https://bitcoincore.org/bin/bitcoin-core-${BITCOIND_VERSION}/bitcoin-${BITCOIND_VERSION}-${TARGET_ARCH}.tar.gz
@@ -47,15 +47,15 @@ jobs:
 
           # sudo PATH="/usr/local/opt:$PATH" LIBRARY_PATH=/opt/homebrew/lib CPATH=/opt/homebrew/include make install
 
-      - name: Start bitcoind in regtest mode
+      - name: Start bitnetd in regtest mode
         run: |
-          bitcoind -regtest -daemon
+          bitnetd -regtest -daemon
           sleep 5
 
       - name: Generate initial block
         run: |
-          bitcoin-cli -regtest createwallet default_wallet
-          bitcoin-cli -regtest generatetoaddress 1 $(bitcoin-cli -regtest getnewaddress)
+          bitnet-cli -regtest createwallet default_wallet
+          bitnet-cli -regtest generatetoaddress 1 $(bitnet-cli -regtest getnewaddress)
           sleep 2
 
       - name: Start lightningd in regtest mode

@@ -675,7 +675,7 @@ class LightningRpc(UnixDomainSocketRpc):
 
     def dev_rescan_outputs(self):
         """
-        Synchronize the state of our funds with bitcoind.
+        Synchronize the state of our funds with bitnetd.
         """
         return self.call("dev-rescan-outputs")
 

@@ -15,7 +15,7 @@ cd /tmp/
 # Since we inadvertently broke `elementsd` support in the past we only
 # want to download and enable the daemon that is actually going to be
 # used when running in CI. Otherwise we could end up accidentally
-# testing against `bitcoind` but still believe that we ran against
+# testing against `bitnetd` but still believe that we ran against
 # `elementsd`.
 if [ "$TEST_NETWORK" = "liquid-regtest" ]; then
     wget "https://github.com/ElementsProject/elements/releases/download/elements-${ELEMENTS_VERSION}/${EFILENAME}"

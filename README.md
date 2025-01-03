@@ -35,7 +35,7 @@ Don't hesitate to reach out to us on [Build-on-L2][bol2], or on the implementati
 
 ## Getting Started
 
-Core Lightning only works on Linux and macOS, and requires a locally (or remotely) running `bitcoind` (version 25.0 or above) that is fully caught up with the network you're running on, and relays transactions (ie with `blocksonly=0`).
+Core Lightning only works on Linux and macOS, and requires a locally (or remotely) running `bitnetd` (version 25.0 or above) that is fully caught up with the network you're running on, and relays transactions (ie with `blocksonly=0`).
 Pruning (`prune=n` option in `bitcoin.conf`) is partially supported, see [here](#pruning) for more details.
 
 ### Installation
@@ -50,7 +50,7 @@ There are 3 supported installation options:
 
 #### Regtest (local, fast-start) Option
 If you want to experiment with `lightningd`, there's a script to set
-up a `bitcoind` regtest test network of two local lightning nodes,
+up a `bitnetd` regtest test network of two local lightning nodes,
 which provides a convenient `start_ln` helper. See the notes at the top
 of the `startup_regtest.sh` file for details on how to use it.
 
@@ -59,13 +59,13 @@ of the `startup_regtest.sh` file for details on how to use it.
 ```
 
 #### Mainnet Option
-To test with real bitcoin,  you will need to have a local `bitcoind` node running:
+To test with real bitcoin,  you will need to have a local `bitnetd` node running:
 
 ```bash
-bitcoind -daemon
+bitnetd -daemon
 ```
 
-Wait until `bitcoind` has synchronized with the network.
+Wait until `bitnetd` has synchronized with the network.
 
 Make sure that you do not have `walletbroadcast=0` in your `~/.bitcoin/bitcoin.conf`, or you may run into trouble.
 Notice that running `lightningd` against a pruned node may cause some issues if not managed carefully, see [below](#pruning) for more information.
@@ -191,18 +191,18 @@ A sample configuration file is available at `contrib/config-example`.
 
 ### Pruning
 
-Core Lightning requires JSON-RPC access to a fully synchronized `bitcoind` in order to synchronize with the Bitcoin network.
-Access to ZeroMQ is not required and `bitcoind` does not need to be run with `txindex` like other implementations.
-The lightning daemon will poll `bitcoind` for new blocks that it hasn't processed yet, thus synchronizing itself with `bitcoind`.
-If `bitcoind` prunes a block that Core Lightning has not processed yet, e.g., Core Lightning was not running for a prolonged period, then `bitcoind` will not be able to serve the missing blocks, hence Core Lightning will not be able to synchronize anymore and will be stuck.
-In order to avoid this situation you should be monitoring the gap between Core Lightning's blockheight using `lightning-cli getinfo` and `bitcoind`'s blockheight using `bitcoin-cli getblockchaininfo`.
+Core Lightning requires JSON-RPC access to a fully synchronized `bitnetd` in order to synchronize with the Bitcoin network.
+Access to ZeroMQ is not required and `bitnetd` does not need to be run with `txindex` like other implementations.
+The lightning daemon will poll `bitnetd` for new blocks that it hasn't processed yet, thus synchronizing itself with `bitnetd`.
+If `bitnetd` prunes a block that Core Lightning has not processed yet, e.g., Core Lightning was not running for a prolonged period, then `bitnetd` will not be able to serve the missing blocks, hence Core Lightning will not be able to synchronize anymore and will be stuck.
+In order to avoid this situation you should be monitoring the gap between Core Lightning's blockheight using `lightning-cli getinfo` and `bitnetd`'s blockheight using `bitnet-cli getblockchaininfo`.
 If the two blockheights drift apart it might be necessary to intervene.
 
 ### HD wallet encryption
 
 You can encrypt the `hsm_secret` content (which is used to derive the HD wallet's master key) by passing the `--encrypted-hsm` startup argument, or by using the `hsmtool` (which you can find in the `tool/` directory at the root of this repo) with the `encrypt` method. You can unencrypt an encrypted `hsm_secret` using the `hsmtool` with the `decrypt` method.
 
-If you encrypt your `hsm_secret`, you will have to pass the `--encrypted-hsm` startup option to `lightningd`. Once your `hsm_secret` is encrypted, you __will not__ be able to access your funds without your password, so please beware with your password management. Also, beware of not feeling too safe with an encrypted `hsm_secret`: unlike for `bitcoind` where the wallet encryption can restrict the usage of some RPC command, `lightningd` always needs to access keys from the wallet which is thus __not locked__ (yet), even with an encrypted BIP32 master seed.
+If you encrypt your `hsm_secret`, you will have to pass the `--encrypted-hsm` startup option to `lightningd`. Once your `hsm_secret` is encrypted, you __will not__ be able to access your funds without your password, so please beware with your password management. Also, beware of not feeling too safe with an encrypted `hsm_secret`: unlike for `bitnetd` where the wallet encryption can restrict the usage of some RPC command, `lightningd` always needs to access keys from the wallet which is thus __not locked__ (yet), even with an encrypted BIP32 master seed.
 
 ### Developers
 

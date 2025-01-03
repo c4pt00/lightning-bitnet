@@ -149,7 +149,7 @@ def test_pay_limits(node_factory):
     assert status[0]['strategy'] == "Initial attempt"
 
 
-def test_pay_exclude_node(node_factory, bitcoind):
+def test_pay_exclude_node(node_factory, bitnetd):
     """Test excluding the node if there's the NODE-level error in the failure_code
     """
     # FIXME: Remove our reliance on HTLCs failing on startup and the need for
@@ -193,7 +193,7 @@ def test_pay_exclude_node(node_factory, bitcoind):
     scid14, _ = l1.fundchannel(l4, 10**6, wait_for_active=False)
     scid45, _ = l4.fundchannel(l5, 10**6, wait_for_active=False)
     scid53, _ = l5.fundchannel(l3, 10**6, wait_for_active=False)
-    mine_funding_to_announce(bitcoind, [l1, l2, l3, l4, l5])
+    mine_funding_to_announce(bitnetd, [l1, l2, l3, l4, l5])
 
     l1.daemon.wait_for_logs([r'update for channel {}/0 now ACTIVE'
                              .format(scid14),
@@ -245,7 +245,7 @@ def test_pay0(node_factory):
         l1.rpc.waitsendpay(rhash)
 
 
-def test_pay_disconnect(node_factory, bitcoind):
+def test_pay_disconnect(node_factory, bitnetd):
     """If the remote node has disconnected, we fail payment, but can try again when it reconnects"""
     l1, l2 = node_factory.line_graph(2, opts={'dev-max-fee-multiplier': 5,
                                               'may_reconnect': True,
@@ -285,8 +285,8 @@ def test_pay_disconnect(node_factory, bitcoind):
     # Make l2 fail hard.
     l2.rpc.close(l1.info['id'], unilateraltimeout=1)
     l2.daemon.wait_for_log('sendrawtx exit')
-    bitcoind.generate_block(1, wait_for_mempool=1)
-    sync_blockheight(bitcoind, [l1, l2])
+    bitnetd.generate_block(1, wait_for_mempool=1)
+    sync_blockheight(bitnetd, [l1, l2])
 
     # Should fail due to permenant channel fail
     with pytest.raises(RpcError, match=r'WIRE_UNKNOWN_NEXT_PEER'):
@@ -391,7 +391,7 @@ def test_pay_optional_args(node_factory):
 
 @pytest.mark.openchannel('v1')
 @pytest.mark.openchannel('v2')
-def test_payment_success_persistence(node_factory, bitcoind, executor):
+def test_payment_success_persistence(node_factory, bitnetd, executor):
     # Start two nodes and open a channel.. die during payment.
     # Feerates identical so we don't get gratuitous commit to update them
     disconnect = ['+WIRE_COMMITMENT_SIGNED']
@@ -1123,12 +1123,12 @@ def test_decode(node_factory):
         l1.rpc.decode('1111111')
 
 
-def test_forward(node_factory, bitcoind):
+def test_forward(node_factory, bitnetd):
     # Connect 1 -> 2 -> 3.
     l1, l2, l3 = node_factory.line_graph(3, wait_for_announce=True)
 
     # If they're at different block heights we can get spurious errors.
-    sync_blockheight(bitcoind, [l1, l2, l3])
+    sync_blockheight(bitnetd, [l1, l2, l3])
 
     chanid1 = only_one(l1.rpc.listpeerchannels(l2.info['id'])['channels'])['short_channel_id']
     chanid2 = only_one(l2.rpc.listpeerchannels(l3.info['id'])['channels'])['short_channel_id']
@@ -1188,7 +1188,7 @@ def test_forward(node_factory, bitcoind):
     assert only_one(re.findall(expected_line, str(koinly_csv)))
 
 
-def test_forward_different_fees_and_cltv(node_factory, bitcoind):
+def test_forward_different_fees_and_cltv(node_factory, bitnetd):
     # FIXME: Check BOLT quotes here too
     # BOLT #7:
     # ```
@@ -1239,7 +1239,7 @@ def test_forward_different_fees_and_cltv(node_factory, bitcoind):
 
     c1, _ = l1.fundchannel(l2, 10**6)
     c2, _ = l2.fundchannel(l3, 10**6)
-    mine_funding_to_announce(bitcoind, [l1, l2, l3])
+    mine_funding_to_announce(bitnetd, [l1, l2, l3])
 
     # Make sure l1 has seen announce for all channels.
     l1.wait_channel_active(c1)
@@ -1306,9 +1306,9 @@ def test_forward_different_fees_and_cltv(node_factory, bitcoind):
     # We add one to the blockcount for a bit of fuzz (FIXME: Shadowroute would fix this!)
     shadow_route = 1
     l1.daemon.wait_for_log("Adding HTLC 0 amount=5010198msat cltv={} gave CHANNEL_ERR_ADD_OK"
-                           .format(bitcoind.rpc.getblockcount() + 20 + 9 + shadow_route))
+                           .format(bitnetd.rpc.getblockcount() + 20 + 9 + shadow_route))
     l2.daemon.wait_for_log("Adding HTLC 0 amount=4999999msat cltv={} gave CHANNEL_ERR_ADD_OK"
-                           .format(bitcoind.rpc.getblockcount() + 9 + shadow_route))
+                           .format(bitnetd.rpc.getblockcount() + 9 + shadow_route))
     l3.daemon.wait_for_log("Resolved invoice 'test_forward_different_fees_and_cltv' with amount 4999999msat")
     assert only_one(l3.rpc.listinvoices('test_forward_different_fees_and_cltv')['invoices'])['status'] == 'paid'
 
@@ -1324,7 +1324,7 @@ def test_forward_different_fees_and_cltv(node_factory, bitcoind):
         assert c[1]['source'] == c[0]['destination']
 
 
-def test_forward_pad_fees_and_cltv(node_factory, bitcoind):
+def test_forward_pad_fees_and_cltv(node_factory, bitnetd):
     """Test that we are allowed extra locktime delta, and fees"""
 
     l1, l2, l3 = node_factory.get_nodes(3, opts=[{'cltv-delta': 10, 'fee-base': 100, 'fee-per-satoshi': 1000},
@@ -1345,7 +1345,7 @@ def test_forward_pad_fees_and_cltv(node_factory, bitcoind):
 
     c1, _ = l1.fundchannel(l2, 10**6)
     c2, _ = l2.fundchannel(l3, 10**6)
-    mine_funding_to_announce(bitcoind, [l1, l2, l3])
+    mine_funding_to_announce(bitnetd, [l1, l2, l3])
 
     # Make sure l1 has seen announce for all channels.
     l1.wait_channel_active(c1)
@@ -1394,7 +1394,7 @@ def test_forward_pad_fees_and_cltv(node_factory, bitcoind):
     assert inve['debit_msat'] == incomes[0]['debit_msat'] + incomes[1]['debit_msat']
 
 
-def test_forward_stats(node_factory, bitcoind):
+def test_forward_stats(node_factory, bitnetd):
     """Check that we track forwarded payments correctly.
 
     We wire up the network to have l1 as payment initiator, l2 as
@@ -1409,7 +1409,7 @@ def test_forward_stats(node_factory, bitcoind):
     l2.openchannel(l4, 10**6, wait_for_announce=False)
     l2.openchannel(l5, 10**6, wait_for_announce=False)
 
-    mine_funding_to_announce(bitcoind, [l1, l2, l3, l4, l5])
+    mine_funding_to_announce(bitnetd, [l1, l2, l3, l4, l5])
 
     wait_for(lambda: len(l1.rpc.listchannels()['channels']) == 8)
 
@@ -1473,7 +1473,7 @@ def test_forward_stats(node_factory, bitcoind):
 
 
 @pytest.mark.slow_test
-def test_forward_local_failed_stats(node_factory, bitcoind, executor):
+def test_forward_local_failed_stats(node_factory, bitnetd, executor):
     """Check that we track forwarded payments correctly.
 
     We wire up the network to have l1 and l6 as payment initiator, l2 as
@@ -1535,7 +1535,7 @@ def test_forward_local_failed_stats(node_factory, bitcoind, executor):
     l6.fundchannel(l1, 10**6)
 
     # Make sure routes finalized.
-    mine_funding_to_announce(bitcoind, [l1, l2, l3, l4, l5, l6])
+    mine_funding_to_announce(bitnetd, [l1, l2, l3, l4, l5, l6])
     l1.wait_channel_active(c23)
     l1.wait_channel_active(c24)
     l1.wait_channel_active(c25)
@@ -1671,15 +1671,15 @@ def test_forward_local_failed_stats(node_factory, bitcoind, executor):
     _, txid, blocks = l2.wait_for_onchaind_tx('OUR_HTLC_TIMEOUT_TO_US',
                                               'THEIR_UNILATERAL/OUR_HTLC')
     assert blocks == 5
-    bitcoind.generate_block(5)
+    bitnetd.generate_block(5)
 
     # Could be RBF!
     l2.mine_txid_or_rbf(txid)
     l2.daemon.wait_for_log('Resolved THEIR_UNILATERAL/OUR_HTLC by our proposal OUR_HTLC_TIMEOUT_TO_US')
     l4.daemon.wait_for_log('Ignoring output.*: OUR_UNILATERAL/THEIR_HTLC')
 
-    bitcoind.generate_block(100)
-    sync_blockheight(bitcoind, [l2])
+    bitnetd.generate_block(100)
+    sync_blockheight(bitnetd, [l2])
 
     # give time to let l2 store the local_failed stats
     time.sleep(5)
@@ -1702,7 +1702,7 @@ def test_forward_local_failed_stats(node_factory, bitcoind, executor):
 
 
 @pytest.mark.slow_test
-def test_htlcs_cltv_only_difference(node_factory, bitcoind):
+def test_htlcs_cltv_only_difference(node_factory, bitnetd):
     # l1 -> l2 -> l3 -> l4
     # l4 ignores htlcs, so they stay.
     # l3 will see a reconnect from l4 when l4 restarts.
@@ -1717,16 +1717,16 @@ def test_htlcs_cltv_only_difference(node_factory, bitcoind):
     l2.rpc.sendpay(r, h, payment_secret=inv['payment_secret'])
 
     # Now increment CLTV
-    bitcoind.generate_block(1)
-    sync_blockheight(bitcoind, [l1, l2, l3, l4])
+    bitnetd.generate_block(1)
+    sync_blockheight(bitnetd, [l1, l2, l3, l4])
 
     # L1 tries to pay
     r = l1.rpc.getroute(l4.info['id'], 10**8, 1)["route"]
     l1.rpc.sendpay(r, h, payment_secret=inv['payment_secret'])
 
     # Now increment CLTV
-    bitcoind.generate_block(1)
-    sync_blockheight(bitcoind, [l1, l2, l3, l4])
+    bitnetd.generate_block(1)
+    sync_blockheight(bitnetd, [l1, l2, l3, l4])
 
     # L3 tries to pay
     r = l3.rpc.getroute(l4.info['id'], 10**8, 1)["route"]
@@ -1779,7 +1779,7 @@ def test_pay_variants(node_factory):
 
 
 @pytest.mark.slow_test
-def test_pay_retry(node_factory, bitcoind, executor, chainparams):
+def test_pay_retry(node_factory, bitnetd, executor, chainparams):
     """Make sure pay command retries properly. """
 
     def exhaust_channel(opener, peer, scid, already_spent=0):
@@ -1819,7 +1819,7 @@ def test_pay_retry(node_factory, bitcoind, executor, chainparams):
     scid35, _ = l3.fundchannel(l5, 10**6, wait_for_active=False)
 
     # Make sure l1 sees all 7 channels
-    mine_funding_to_announce(bitcoind, [l1, l2, l3, l4, l5])
+    mine_funding_to_announce(bitnetd, [l1, l2, l3, l4, l5])
     wait_for(lambda: len(l1.rpc.listchannels()['channels']) == 14)
 
     # Exhaust shortcut channels one at a time, to force retries.
@@ -1861,7 +1861,7 @@ def test_pay_retry(node_factory, bitcoind, executor, chainparams):
 
 
 @pytest.mark.slow_test
-def test_pay_avoid_low_fee_chan(node_factory, bitcoind, executor, chainparams):
+def test_pay_avoid_low_fee_chan(node_factory, bitnetd, executor, chainparams):
     """Make sure we're able to route around a low fee depleted channel """
 
     # NOTE: This test did not consistently fail. If this test is flaky, that
@@ -1905,7 +1905,7 @@ def test_pay_avoid_low_fee_chan(node_factory, bitcoind, executor, chainparams):
         return True
 
     # Make sure all relevant gossip reached the sender.
-    mine_funding_to_announce(bitcoind, [sender, router, randomnode, dest])
+    mine_funding_to_announce(bitnetd, [sender, router, randomnode, dest])
     wait_for(has_gossip)
 
     def listpays_nofail(b11):
@@ -1929,7 +1929,7 @@ def test_pay_avoid_low_fee_chan(node_factory, bitcoind, executor, chainparams):
 
 
 @pytest.mark.slow_test
-def test_pay_routeboost(node_factory, bitcoind):
+def test_pay_routeboost(node_factory, bitnetd):
     """Make sure we can use routeboost information.
 
     ```dot
@@ -1954,7 +1954,7 @@ def test_pay_routeboost(node_factory, bitcoind):
     scidl2l3, _ = l2.fundchannel(l3, 10**6)
 
     # Make sure l1 knows about the 2->3 channel.
-    mine_funding_to_announce(bitcoind, [l1, l2, l3, l4, l5])
+    mine_funding_to_announce(bitnetd, [l1, l2, l3, l4, l5])
     l1.daemon.wait_for_logs([r'update for channel {}/0 now ACTIVE'
                              .format(scidl2l3),
                              r'update for channel {}/1 now ACTIVE'
@@ -2063,7 +2063,7 @@ def test_pay_routeboost(node_factory, bitcoind):
     # output
 
 
-def test_setchannel_usage(node_factory, bitcoind):
+def test_setchannel_usage(node_factory, bitnetd):
     # TEST SETUP
     #
     # [l1] ---> [l2]  (channel funded)
@@ -2137,7 +2137,7 @@ def test_setchannel_usage(node_factory, bitcoind):
     assert channel['maximum_htlc_out_msat'] == 133337
 
     # wait for gossip and check if l1 sees new fees in listchannels after mining
-    bitcoind.generate_block(5)
+    bitnetd.generate_block(5)
     wait_for(lambda: [c['base_fee_millisatoshi'] for c in l1.rpc.listchannels(scid)['channels']] == [DEF_BASE, 1337])
     wait_for(lambda: [c['fee_per_millionth'] for c in l1.rpc.listchannels(scid)['channels']] == [DEF_PPM, 137])
     wait_for(lambda: [c['htlc_minimum_msat'] for c in l1.rpc.listchannels(scid)['channels']] == [0, 17])
@@ -2251,7 +2251,7 @@ def test_setchannel_usage(node_factory, bitcoind):
         })
 
 
-def test_setchannel_state(node_factory, bitcoind):
+def test_setchannel_state(node_factory, bitnetd):
     # TEST SETUP
     #
     # [l1] --> [l2] --> [l3]
@@ -2280,7 +2280,7 @@ def test_setchannel_state(node_factory, bitcoind):
     # cid = result['channels'][0]['channel_id']
 
     # test routing correct new fees once routing is established
-    mine_funding_to_announce(bitcoind, [l1, l2, l3])
+    mine_funding_to_announce(bitnetd, [l1, l2, l3])
 
     l1.wait_for_route(l3)
     inv = l3.rpc.invoice(100000, 'test_setchannel_state', 'desc')['bolt11']
@@ -2295,7 +2295,7 @@ def test_setchannel_state(node_factory, bitcoind):
 
     # wait for l2 to see unilateral close via bitcoin network
     while l2.channel_state(l3) == "CHANNELD_NORMAL":
-        bitcoind.generate_block(1)
+        bitnetd.generate_block(1)
     # assert l2.channel_state(l3) == "FUNDING_SPEND_SEEN"
 
     # Try to setchannel in order to raise expected error.
@@ -2305,7 +2305,7 @@ def test_setchannel_state(node_factory, bitcoind):
         l2.rpc.setchannel(l3.info['id'], 10, 1)
 
 
-def test_setchannel_routing(node_factory, bitcoind):
+def test_setchannel_routing(node_factory, bitnetd):
     # TEST SETUP
     #
     # [l1] <--default_fees--> [l2] <--specific_fees--> [l3]
@@ -2422,7 +2422,7 @@ def test_setchannel_routing(node_factory, bitcoind):
     assert 'warning_capacity' in inv
 
 
-def test_setchannel_zero(node_factory, bitcoind):
+def test_setchannel_zero(node_factory, bitnetd):
     # TEST SETUP
     #
     # [l1] <--default_fees--> [l2] <--specific_fees--> [l3]
@@ -2471,7 +2471,7 @@ def test_setchannel_zero(node_factory, bitcoind):
     assert only_one(ret['channels'])['maximum_htlc_out_msat'] == MAX_HTLC
 
 
-def test_setchannel_restart(node_factory, bitcoind):
+def test_setchannel_restart(node_factory, bitnetd):
     # TEST SETUP
     #
     # [l1] <--default_fees--> [l2] <--specific_fees--> [l3]
@@ -2518,7 +2518,7 @@ def test_setchannel_restart(node_factory, bitcoind):
     assert result['amount_sent_msat'] == 501404
 
 
-def test_setchannel_all(node_factory, bitcoind):
+def test_setchannel_all(node_factory, bitnetd):
     # TEST SETUP
     #
     # [l1]----> [l2]
@@ -2572,7 +2572,7 @@ def test_setchannel_all(node_factory, bitcoind):
     assert result['channels'][1]['maximum_htlc_out_msat'] == 0xCAFE
 
 
-def test_setchannel_startup_opts(node_factory, bitcoind):
+def test_setchannel_startup_opts(node_factory, bitnetd):
     """Tests that custom config/cmdline options are applied correctly when set
     """
     opts = {
@@ -2595,7 +2595,7 @@ def test_setchannel_startup_opts(node_factory, bitcoind):
 
 
 @pytest.mark.parametrize("anchors", [False, True])
-def test_channel_spendable(node_factory, bitcoind, anchors):
+def test_channel_spendable(node_factory, bitnetd, anchors):
     """Test that spendable_msat is accurate"""
     sats = 10**6
     opts = {'plugin': os.path.join(os.getcwd(), 'tests/plugins/hold_invoice.py'), 'holdtime': '30'}
@@ -2652,7 +2652,7 @@ def test_channel_spendable(node_factory, bitcoind, anchors):
     l2.rpc.waitsendpay(payment_hash, TIMEOUT)
 
 
-def test_channel_receivable(node_factory, bitcoind):
+def test_channel_receivable(node_factory, bitnetd):
     """Test that receivable_msat is accurate"""
     sats = 10**6
     l1, l2 = node_factory.line_graph(2, fundamount=sats, wait_for_announce=True,
@@ -2707,7 +2707,7 @@ def test_channel_receivable(node_factory, bitcoind):
     l2.rpc.waitsendpay(payment_hash, TIMEOUT)
 
 
-def test_channel_spendable_large(node_factory, bitcoind):
+def test_channel_spendable_large(node_factory, bitnetd):
     """Test that spendable_msat is accurate for large channels"""
     # This is almost the max allowable spend.
     sats = 4294967
@@ -2743,7 +2743,7 @@ def test_channel_spendable_large(node_factory, bitcoind):
     l1.rpc.waitsendpay(payment_hash, TIMEOUT)
 
 
-def test_channel_spendable_receivable_capped(node_factory, bitcoind):
+def test_channel_spendable_receivable_capped(node_factory, bitnetd):
     """Test that spendable_msat and receivable_msat is capped at 2^32-1"""
     sats = 16777215
     l1, l2 = node_factory.line_graph(2, fundamount=sats, wait_for_announce=False,
@@ -2753,7 +2753,7 @@ def test_channel_spendable_receivable_capped(node_factory, bitcoind):
 
 
 @unittest.skipIf(True, "Test is extremely flaky")
-def test_lockup_drain(node_factory, bitcoind):
+def test_lockup_drain(node_factory, bitnetd):
     """Try to get channel into a state where opener can't afford fees on additional HTLC, so peer can't add HTLC"""
     l1, l2 = node_factory.line_graph(2, opts={'may_reconnect': True})
 
@@ -2778,7 +2778,7 @@ def test_lockup_drain(node_factory, bitcoind):
 
 
 @unittest.skipIf(TEST_NETWORK != 'regtest', 'Assumes anchors')
-def test_htlc_too_dusty_outgoing(node_factory, bitcoind, chainparams):
+def test_htlc_too_dusty_outgoing(node_factory, bitnetd, chainparams):
     """ Try to hit the 'too much dust' limit, should fail the HTLC """
 
     # elements txs are bigger so they become dusty faster
@@ -2830,7 +2830,7 @@ def test_htlc_too_dusty_outgoing(node_factory, bitcoind, chainparams):
     assert res['status'] == 'pending'
 
 
-def test_htlc_too_dusty_incoming(node_factory, bitcoind):
+def test_htlc_too_dusty_incoming(node_factory, bitnetd):
     """ Try to hit the 'too much dust' limit, should fail the HTLC """
     l1, l2, l3 = node_factory.line_graph(3, opts=[{'may_reconnect': True,
                                                    'max-dust-htlc-exposure-msat': '200000sat'},
@@ -2867,7 +2867,7 @@ def test_htlc_too_dusty_incoming(node_factory, bitcoind):
     wait_for(lambda: only_one(l1.rpc.listsendpays(payment_hash=inv['payment_hash'])['payments'])['status'] == 'failed')
 
 
-def test_error_returns_blockheight(node_factory, bitcoind):
+def test_error_returns_blockheight(node_factory, bitnetd):
     """Test that incorrect_or_unknown_payment_details returns block height"""
     l1, l2 = node_factory.line_graph(2)
 
@@ -2886,11 +2886,11 @@ def test_error_returns_blockheight(node_factory, bitcoind):
     #    * [`u64`:`htlc_msat`]
     #    * [`u32`:`height`]
     assert (err.value.error['data']['raw_message']
-            == '400f{:016x}{:08x}'.format(100, bitcoind.rpc.getblockcount()))
+            == '400f{:016x}{:08x}'.format(100, bitnetd.rpc.getblockcount()))
 
 
 @unittest.skipIf(TEST_NETWORK != 'regtest', "Invoice is network specific")
-def test_pay_no_secret(node_factory, bitcoind):
+def test_pay_no_secret(node_factory, bitnetd):
     l1, l2 = node_factory.line_graph(2, wait_for_announce=True)
 
     l2.rpc.invoice(100000, "test_pay_no_secret", "test_pay_no_secret",
@@ -3038,7 +3038,7 @@ def test_sendonion_rpc(node_factory):
 
 @pytest.mark.openchannel('v1')
 @pytest.mark.openchannel('v2')
-def test_partial_payment(node_factory, bitcoind, executor):
+def test_partial_payment(node_factory, bitnetd, executor):
     # We want to test two payments at the same time, before we send commit
     l1, l2, l3, l4 = node_factory.get_nodes(4, [{}] + [{'dev-disable-commit-after': 0, 'dev-no-htlc-timeout': None}] * 2 + [{'plugin': os.path.join(os.getcwd(), 'tests/plugins/print_htlc_onion.py')}])
 
@@ -3051,7 +3051,7 @@ def test_partial_payment(node_factory, bitcoind, executor):
     scid24, _ = l2.fundchannel(l4, 100000)
     l3.rpc.connect(l4.info['id'], 'localhost', l4.port)
     scid34, _ = l3.fundchannel(l4, 100000)
-    mine_funding_to_announce(bitcoind, [l1, l2, l3, l4])
+    mine_funding_to_announce(bitnetd, [l1, l2, l3, l4])
 
     # Wait until l1 knows about all channels.
     wait_for(lambda: len(l1.rpc.listchannels()['channels']) == 8)
@@ -3203,7 +3203,7 @@ def test_partial_payment(node_factory, bitcoind, executor):
             groupid=1)
 
 
-def test_partial_payment_timeout(node_factory, bitcoind):
+def test_partial_payment_timeout(node_factory, bitnetd):
     l1, l2 = node_factory.line_graph(2)
 
     inv = l2.rpc.invoice(1000, 'inv', 'inv')
@@ -3254,7 +3254,7 @@ def test_partial_payment_timeout(node_factory, bitcoind):
     l2.daemon.wait_for_log(r'HTLC set contains 2 HTLCs, for a total of 1000msat out of 1000msat \(payment_secret\)')
 
 
-def test_partial_payment_restart(node_factory, bitcoind):
+def test_partial_payment_restart(node_factory, bitnetd):
     """Test that we recover a set when we restart"""
     l1, l2, l3 = node_factory.line_graph(3, wait_for_announce=True,
                                          opts=[{}]
@@ -3297,7 +3297,7 @@ def test_partial_payment_restart(node_factory, bitcoind):
     l1.rpc.waitsendpay(payment_hash=inv['payment_hash'], timeout=TIMEOUT, partid=2)
 
 
-def test_partial_payment_htlc_loss(node_factory, bitcoind):
+def test_partial_payment_htlc_loss(node_factory, bitnetd):
     """Test that we discard a set when the HTLC is lost"""
     # We want l2 to fail once it has completed first htlc.
     l1, l2, l3 = node_factory.line_graph(3, wait_for_announce=True,
@@ -3317,7 +3317,7 @@ def test_partial_payment_htlc_loss(node_factory, bitcoind):
 
     # Since HTLC is missing from commit (dust), it's closed as soon as l2 sees
     # it onchain.  l3 shouldn't crash though.
-    bitcoind.generate_block(1, wait_for_mempool=1)
+    bitnetd.generate_block(1, wait_for_mempool=1)
 
     with pytest.raises(RpcError,
                        match=r'WIRE_PERMANENT_CHANNEL_FAILURE \(reply from remote\)'):
@@ -3431,7 +3431,7 @@ def test_reject_invalid_payload(node_factory):
 
 
 @unittest.skip("Test is flaky causing CI to be unusable.")
-def test_excluded_adjacent_routehint(node_factory, bitcoind):
+def test_excluded_adjacent_routehint(node_factory, bitnetd):
     """Test case where we try have a routehint which leads to an adjacent
     node, but the result exceeds our maxfee; we crashed trying to find
     what part of the path was most expensive in that case
@@ -3698,7 +3698,7 @@ def test_pay_exemptfee(node_factory):
     l1.dev_pay(l3.rpc.invoice(int(5001 * 200), "lbl4", "desc")['bolt11'], dev_use_shadow=False)
 
 
-def test_pay_peer(node_factory, bitcoind):
+def test_pay_peer(node_factory, bitnetd):
     """If we have a direct channel to the destination we should use that.
 
     This is complicated a bit by not having sufficient capacity, but the
@@ -3744,7 +3744,7 @@ def test_pay_peer(node_factory, bitcoind):
     l1.dev_pay(inv, dev_use_shadow=False)
 
 
-def test_mpp_adaptive(node_factory, bitcoind):
+def test_mpp_adaptive(node_factory, bitnetd):
     """We have two paths, both too small on their own, let's combine them.
 
     ```dot
@@ -3798,7 +3798,7 @@ def test_mpp_adaptive(node_factory, bitcoind):
 
     wait_for(lambda: all([all_htlcs(n) == [] for n in [l1, l2, l3, l4]]))
 
-    mine_funding_to_announce(bitcoind, [l1, l2, l3, l4])
+    mine_funding_to_announce(bitnetd, [l1, l2, l3, l4])
     wait_for(lambda: len(l1.rpc.listchannels()['channels']) == 8)
 
     inv = l4.rpc.invoice(
@@ -3829,7 +3829,7 @@ def test_mpp_adaptive(node_factory, bitcoind):
     assert 'bolt11' in only_one(l1.rpc.listpays()['pays'])
 
 
-def test_pay_fail_unconfirmed_channel(node_factory, bitcoind):
+def test_pay_fail_unconfirmed_channel(node_factory, bitnetd):
     '''
     Replicate #3855.
     `pay` crash when any direct channel is still
@@ -3852,8 +3852,8 @@ def test_pay_fail_unconfirmed_channel(node_factory, bitcoind):
         l1.rpc.pay(invl2)
 
     # Let the channel confirm.
-    bitcoind.generate_block(6)
-    sync_blockheight(bitcoind, [l1, l2])
+    bitnetd.generate_block(6)
+    sync_blockheight(bitnetd, [l1, l2])
 
     # Now give enough capacity so l1 can pay.
     invl1 = l1.rpc.invoice(Millisatoshi(amount_sat * 2 * 1000), 'j', 'j')['bolt11']
@@ -3866,7 +3866,7 @@ def test_pay_fail_unconfirmed_channel(node_factory, bitcoind):
     l1.rpc.pay(invl2)
 
 
-def test_bolt11_null_after_pay(node_factory, bitcoind):
+def test_bolt11_null_after_pay(node_factory, bitnetd):
     l1, l2 = node_factory.get_nodes(2)
 
     amount_sat = 10 ** 6
@@ -3881,8 +3881,8 @@ def test_bolt11_null_after_pay(node_factory, bitcoind):
     l2.rpc.fundchannel(l1.info['id'], amount_sat * 3)
 
     # Let the channel confirm.
-    bitcoind.generate_block(6)
-    sync_blockheight(bitcoind, [l1, l2])
+    bitnetd.generate_block(6)
+    sync_blockheight(bitnetd, [l1, l2])
     wait_for(lambda: only_one(l1.rpc.listpeerchannels()['channels'])['state'] == 'CHANNELD_NORMAL')
 
     amt = Millisatoshi(amount_sat * 2 * 1000)
@@ -3896,7 +3896,7 @@ def test_bolt11_null_after_pay(node_factory, bitcoind):
     assert('completed_at' in pays[0])
 
 
-def test_delpay_argument_invalid(node_factory, bitcoind):
+def test_delpay_argument_invalid(node_factory, bitnetd):
     """
     This test includes all possible combinations of input error inside the
     delpay command.
@@ -3942,7 +3942,7 @@ def test_delpay_argument_invalid(node_factory, bitcoind):
     assert len(l2.rpc.listpays()['pays']) == 0
 
 
-def test_delpay_mixed_status(node_factory, bitcoind):
+def test_delpay_mixed_status(node_factory, bitnetd):
     """
     One failure, one success; we only want to delete the failed one!
     """
@@ -3964,7 +3964,7 @@ def test_delpay_mixed_status(node_factory, bitcoind):
     assert len(l1.rpc.listsendpays()['payments']) == 1
 
 
-def test_listpay_result_with_paymod(node_factory, bitcoind):
+def test_listpay_result_with_paymod(node_factory, bitnetd):
     """
     The object of this test is to verify the correct behavior
     of the RPC command listpay e with two different type of
@@ -4004,7 +4004,7 @@ def test_listsendpays_and_listpays_order(node_factory):
     assert created_at == sorted(created_at)
 
 
-def test_mpp_waitblockheight_routehint_conflict(node_factory, bitcoind, executor):
+def test_mpp_waitblockheight_routehint_conflict(node_factory, bitnetd, executor):
     '''
     We have a bug where a blockheight disagreement between us and
     the receiver causes us to advance through the routehints a bit
@@ -4017,7 +4017,7 @@ def test_mpp_waitblockheight_routehint_conflict(node_factory, bitcoind, executor
     l2.rpc.connect(l3.info['id'], 'localhost', l3.port)
     l2l3, _ = l2.fundchannel(l3, 10**7, announce_channel=False)
 
-    mine_funding_to_announce(bitcoind, [l1, l2, l3])
+    mine_funding_to_announce(bitnetd, [l1, l2, l3])
 
     # Wait for l3 to learn about l1->l2, otherwise it will think
     # l2 is a deadend and not add it to the routehint.
@@ -4030,8 +4030,8 @@ def test_mpp_waitblockheight_routehint_conflict(node_factory, bitcoind, executor
     l1.daemon.rpcproxy.mock_rpc('getblockhash', no_more_blocks)
 
     # Increase blockheight by 2, like in test_blockheight_disagreement.
-    bitcoind.generate_block(2)
-    sync_blockheight(bitcoind, [l3])
+    bitnetd.generate_block(2)
+    sync_blockheight(bitnetd, [l3])
 
     inv = l3.rpc.invoice(Millisatoshi(2 * 10000 * 1000), 'i', 'i', exposeprivatechannels=True)['bolt11']
     assert 'routes' in l3.rpc.decode(inv)
@@ -4055,7 +4055,7 @@ def test_mpp_waitblockheight_routehint_conflict(node_factory, bitcoind, executor
 @pytest.mark.openchannel('v1')
 @pytest.mark.openchannel('v2')
 @unittest.skipIf(True, "Temporarily disabled while flake diagnosed: blame Rusty!")
-def test_mpp_interference_2(node_factory, bitcoind, executor):
+def test_mpp_interference_2(node_factory, bitnetd, executor):
     '''
     We create a "public network" that looks like so.
     Each channel is perfectly balanced, with 7 * unit
@@ -4139,7 +4139,7 @@ def test_mpp_interference_2(node_factory, bitcoind, executor):
     l3.fundchannel(l6, int((unit * 6).to_satoshi()), announce_channel=False)
 
     # Now wait for the buyers to learn the entire public network.
-    mine_funding_to_announce(bitcoind, [l1, l2, l3, l4, l5, l6, l7])
+    mine_funding_to_announce(bitnetd, [l1, l2, l3, l4, l5, l6, l7])
     for channel in public_network:
         wait_for(lambda: len(l2.rpc.listchannels(channel)['channels']) == 2)
         wait_for(lambda: len(l3.rpc.listchannels(channel)['channels']) == 2)
@@ -4171,7 +4171,7 @@ def test_mpp_interference_2(node_factory, bitcoind, executor):
 
 
 @pytest.mark.slow_test
-def test_mpp_overload_payee(node_factory, bitcoind):
+def test_mpp_overload_payee(node_factory, bitnetd):
     """
     We had a bug where if the payer is unusually well-connected compared
     to the payee, the payee is unable to accept a large payment since the
@@ -4208,7 +4208,7 @@ def test_mpp_overload_payee(node_factory, bitcoind):
                       l5.fundbalancedchannel(l6, amt)]
 
     # Ensure l1 knows the entire public network.
-    mine_funding_to_announce(bitcoind, [l1, l2, l3, l4, l5, l6])
+    mine_funding_to_announce(bitnetd, [l1, l2, l3, l4, l5, l6])
     for c in public_network:
         wait_for(lambda: len(l1.rpc.listchannels(c)['channels']) >= 2)
 
@@ -4225,7 +4225,7 @@ def test_mpp_overload_payee(node_factory, bitcoind):
     l1.rpc.pay(inv)
 
 
-def test_offer(node_factory, bitcoind):
+def test_offer(node_factory, bitnetd):
     plugin = os.path.join(os.path.dirname(__file__), 'plugins/currencyUSDAUD5000.py')
     l1 = node_factory.get_node(options={'plugin': plugin})
 
@@ -4410,7 +4410,7 @@ def test_offer(node_factory, bitcoind):
                               'recurrence_base': '@1456740000'})
 
 
-def test_offer_deprecated_api(node_factory, bitcoind):
+def test_offer_deprecated_api(node_factory, bitnetd):
     l1, l2 = node_factory.line_graph(2, opts={'allow-deprecated-apis': True})
 
     offer = l2.rpc.call('offer', {'amount': '2msat',
@@ -4422,7 +4422,7 @@ def test_offer_deprecated_api(node_factory, bitcoind):
     l1.rpc.pay(inv['invoice'])
 
 
-def test_fetchinvoice_3hop(node_factory, bitcoind):
+def test_fetchinvoice_3hop(node_factory, bitnetd):
     l1, l2, l3, l4 = node_factory.line_graph(4, wait_for_announce=True,
                                              opts={'may_reconnect': True,
                                                    'dev-no-reconnect': None})
@@ -4433,7 +4433,7 @@ def test_fetchinvoice_3hop(node_factory, bitcoind):
     l1.rpc.call('fetchinvoice', {'offer': offer1['bolt12']})
 
 
-def test_fetchinvoice(node_factory, bitcoind):
+def test_fetchinvoice(node_factory, bitnetd):
     # We remove the conversion plugin on l3, causing it to get upset.
     l1, l2, l3 = node_factory.line_graph(3, wait_for_announce=True,
                                          opts=[{},
@@ -4568,7 +4568,7 @@ def test_fetchinvoice(node_factory, bitcoind):
         l1.rpc.call('fetchinvoice', {'offer': offer1['bolt12'], 'timeout': 10})
 
 
-def test_fetchinvoice_recurrence(node_factory, bitcoind):
+def test_fetchinvoice_recurrence(node_factory, bitnetd):
     """Test for our recurrence extension"""
     l1, l2, l3 = node_factory.line_graph(3, wait_for_announce=True)
 
@@ -4661,7 +4661,7 @@ def test_fetchinvoice_recurrence(node_factory, bitcoind):
                                      'recurrence_label': 'test paywindow'})
 
 
-def test_fetchinvoice_autoconnect(node_factory, bitcoind):
+def test_fetchinvoice_autoconnect(node_factory, bitnetd):
     """We should autoconnect if we need to, to route."""
 
     l1, l2 = node_factory.line_graph(2, wait_for_announce=True,
@@ -4703,7 +4703,7 @@ def test_fetchinvoice_autoconnect(node_factory, bitcoind):
     assert l3.rpc.listpeers(l2.info['id'])['peers'] != []
 
 
-def test_fetchinvoice_disconnected_reply(node_factory, bitcoind):
+def test_fetchinvoice_disconnected_reply(node_factory, bitnetd):
     """We ask for invoice, but reply path doesn't lead directly from recipient"""
     l1, l2, l3 = node_factory.get_nodes(3,
                                         opts={'may_reconnect': True,
@@ -4724,7 +4724,7 @@ def test_fetchinvoice_disconnected_reply(node_factory, bitcoind):
     assert l3.rpc.listpeers(l1.info['id']) == {'peers': []}
 
 
-def test_pay_blockheight_mismatch(node_factory, bitcoind):
+def test_pay_blockheight_mismatch(node_factory, bitnetd):
     """Test that we can send a payment even if not caught up with the chain.
 
     We removed the requirement for the node to be fully synced up with
@@ -4737,7 +4737,7 @@ def test_pay_blockheight_mismatch(node_factory, bitcoind):
     """
 
     send, direct, recv = node_factory.line_graph(3, wait_for_announce=True)
-    sync_blockheight(bitcoind, [send, recv])
+    sync_blockheight(bitnetd, [send, recv])
 
     # Pin `send` at the current height. by not returning the next
     # blockhash. This error is special-cased not to count as the
@@ -4752,9 +4752,9 @@ def test_pay_blockheight_mismatch(node_factory, bitcoind):
         }
 
     send.daemon.rpcproxy.mock_rpc('getblockhash', mock_getblockhash)
-    bitcoind.generate_block(100)
+    bitnetd.generate_block(100)
 
-    sync_blockheight(bitcoind, [recv])
+    sync_blockheight(bitnetd, [recv])
 
     inv = recv.rpc.invoice(42, 'lbl', 'desc')['bolt11']
     send.rpc.pay(inv)
@@ -4766,11 +4766,11 @@ def test_pay_blockheight_mismatch(node_factory, bitcoind):
     send.rpc.pay(inv)
 
 
-def test_pay_waitblockheight_timeout(node_factory, bitcoind):
+def test_pay_waitblockheight_timeout(node_factory, bitnetd):
     plugin = os.path.join(os.path.dirname(__file__), 'plugins', 'endlesswaitblockheight.py')
     l1, l2 = node_factory.line_graph(2, opts=[{}, {'plugin': plugin}])
 
-    sync_blockheight(bitcoind, [l1, l2])
+    sync_blockheight(bitnetd, [l1, l2])
     inv = l2.rpc.invoice(42, 'lbl', 'desc')['bolt11']
 
     with pytest.raises(RpcError, match=r'WIRE_INCORRECT_OR_UNKNOWN_PAYMENT_DETAILS'):
@@ -4799,7 +4799,7 @@ def test_dev_rawrequest(node_factory):
     assert 'invoice' in ret
 
 
-def test_sendinvoice(node_factory, bitcoind):
+def test_sendinvoice(node_factory, bitnetd):
     l1, l2 = node_factory.line_graph(2, wait_for_announce=True)
 
     # Simple offer to send money (balances channel a little)
@@ -4861,7 +4861,7 @@ def test_sendinvoice(node_factory, bitcoind):
     assert out['amount_received_msat'] == Millisatoshi(10000000)
 
 
-def test_sendinvoice_blindedpath(node_factory, bitcoind):
+def test_sendinvoice_blindedpath(node_factory, bitnetd):
     l1, l2 = node_factory.line_graph(2, wait_for_announce=True)
     # We join l3->l1->l2 so l3 can pay invoice sent by l2.
     l3 = node_factory.get_node()
@@ -4900,7 +4900,7 @@ def test_self_pay(node_factory):
 
 
 @unittest.skipIf(TEST_NETWORK != 'regtest', "Canned invoice is network specific")
-def test_unreachable_routehint(node_factory, bitcoind):
+def test_unreachable_routehint(node_factory, bitnetd):
     """Test that we discard routehints that we can't reach.
 
     Reachability is tested by checking whether we can reach the
@@ -4960,7 +4960,7 @@ def test_unreachable_routehint(node_factory, bitcoind):
     assert(len(excinfo.value.error['attempts']) == 1)
 
 
-def test_routehint_tous(node_factory, bitcoind):
+def test_routehint_tous(node_factory, bitnetd):
     """
 Test bug where trying to pay an invoice from an *offline* node which
 gives a routehint straight to us causes an issue
@@ -4985,7 +4985,7 @@ gives a routehint straight to us causes an issue
         l2.rpc.pay(inv)
 
 
-def test_setchannel_enforcement_delay(node_factory, bitcoind):
+def test_setchannel_enforcement_delay(node_factory, bitnetd):
     # Fees start at 1msat + 1%
     l1, l2, l3 = node_factory.line_graph(3, wait_for_announce=True,
                                          opts={'fee-base': 1,
@@ -5046,7 +5046,7 @@ def test_setchannel_enforcement_delay(node_factory, bitcoind):
         l1.rpc.waitsendpay(inv['payment_hash'])
 
 
-def test_listpays_with_filter_by_status(node_factory, bitcoind):
+def test_listpays_with_filter_by_status(node_factory, bitnetd):
     """
     This test check if the filtering by status of the command listpays
     has some mistakes.
@@ -5069,7 +5069,7 @@ def test_listpays_with_filter_by_status(node_factory, bitcoind):
     assert len(l2.rpc.listpays()['pays']) == 1
 
 
-def test_sendpay_grouping(node_factory, bitcoind):
+def test_sendpay_grouping(node_factory, bitnetd):
     """`listpays` should be smart enough to group repeated `pay` calls.
 
     We always use slightly decreasing values for the payment, in order
@@ -5130,7 +5130,7 @@ def test_sendpay_grouping(node_factory, bitcoind):
     assert([p['status'] for p in pays] == ['failed', 'failed', 'complete'])
 
 
-def test_pay_manual_exclude(node_factory, bitcoind):
+def test_pay_manual_exclude(node_factory, bitnetd):
     l1, l2, l3 = node_factory.line_graph(3, wait_for_announce=True)
     l1_id = l1.rpc.getinfo()['id']
     l2_id = l2.rpc.getinfo()['id']
@@ -5158,7 +5158,7 @@ def test_pay_manual_exclude(node_factory, bitcoind):
 
 
 @unittest.skipIf(TEST_NETWORK != 'regtest', "Invoice is network specific")
-def test_pay_bolt11_metadata(node_factory, bitcoind):
+def test_pay_bolt11_metadata(node_factory, bitnetd):
     l1, l2 = node_factory.line_graph(2)
 
     # BOLT #11:
@@ -5180,7 +5180,7 @@ def test_pay_bolt11_metadata(node_factory, bitcoind):
     l2.daemon.wait_for_log("Unexpected payment_metadata {}".format(b'this is metadata'.hex()))
 
 
-def test_pay_middle_fail(node_factory, bitcoind, executor):
+def test_pay_middle_fail(node_factory, bitnetd, executor):
     """Test the case where a HTLC is failed, but not on peer's side, then
     we go onchain"""
     # Set feerates the same so we don't have update_fee interfering.
@@ -5211,12 +5211,12 @@ def test_pay_middle_fail(node_factory, bitcoind, executor):
 
     # After this (cltv is actually +11, and we give it 1 block grace)
     # l2 will go onchain since HTLC is not resolved.
-    bitcoind.generate_block(12)
-    sync_blockheight(bitcoind, [l1, l2, l3])
+    bitnetd.generate_block(12)
+    sync_blockheight(bitnetd, [l1, l2, l3])
     wait_for(lambda: only_one(l2.rpc.listpeerchannels(l3.info['id'])['channels'])['state'] == 'AWAITING_UNILATERAL')
 
     # Three blocks and it will resolve the parent.
-    bitcoind.generate_block(3, wait_for_mempool=1)
+    bitnetd.generate_block(3, wait_for_mempool=1)
 
     # And that will fail upstream
     with pytest.raises(RpcError, match=r'WIRE_INCORRECT_OR_UNKNOWN_PAYMENT_DETAILS'):
@@ -5254,7 +5254,7 @@ def test_payerkey(node_factory):
         n.rpc.createinvoicerequest(encoded, False)['bolt12']
 
 
-def test_pay_multichannel_use_zeroconf(bitcoind, node_factory):
+def test_pay_multichannel_use_zeroconf(bitnetd, node_factory):
     """Check that we use the zeroconf direct channel to pay when we need to"""
     # 0. Setup normal channel, 200k sats.
     zeroconf_plugin = Path(__file__).parent / "plugins" / "zeroconf-selective.py"
@@ -5269,7 +5269,7 @@ def test_pay_multichannel_use_zeroconf(bitcoind, node_factory):
 
     # 1.1 Add funds to l1's wallet for the channel open
     l1.fundwallet(zeroconf_sats * 2)  # This will mine a block!
-    sync_blockheight(bitcoind, [l1, l2])
+    sync_blockheight(bitnetd, [l1, l2])
 
     # 1.2 Open the zeroconf channel
     l1.rpc.fundchannel(l2.info['id'], zeroconf_sats, announce=False, mindepth=0)
@@ -5286,7 +5286,7 @@ def test_pay_multichannel_use_zeroconf(bitcoind, node_factory):
     l1.rpc.pay(inv['bolt11'], riskfactor=riskfactor)
 
 
-def test_delpay_works(node_factory, bitcoind):
+def test_delpay_works(node_factory, bitnetd):
     """
     One failure, one success; deleting the success works (groupid=1, partid=2)
     """
@@ -5547,7 +5547,7 @@ def test_sendpays_wait(node_factory, executor):
                                    'payment_hash': inv3['payment_hash']}}
 
 
-def test_pay_routehint_minhtlc(node_factory, bitcoind):
+def test_pay_routehint_minhtlc(node_factory, bitnetd):
     # l1 -> l2 -> l3 private -> l4
     l1, l2, l3 = node_factory.line_graph(3, wait_for_announce=True)
     l4 = node_factory.get_node()
@@ -5616,7 +5616,7 @@ def test_pay_partial_msat(node_factory, executor):
     l3pay.result(TIMEOUT)
 
 
-def test_blindedpath_privchan(node_factory, bitcoind):
+def test_blindedpath_privchan(node_factory, bitnetd):
     l1, l2 = node_factory.line_graph(2, wait_for_announce=True,
                                      opts={'may_reconnect': True})
     l3 = node_factory.get_node(options={'cltv-final': 120},
@@ -5671,7 +5671,7 @@ def test_blinded_reply_path_scid(node_factory):
     l1.rpc.pay(inv)
 
 
-def test_pay_while_opening_channel(node_factory, bitcoind, executor):
+def test_pay_while_opening_channel(node_factory, bitnetd, executor):
     delay_plugin = {'plugin': os.path.join(os.getcwd(),
                                            'tests/plugins/openchannel_hook_delay.py'),
                     'delaytime': '10'}
@@ -5687,7 +5687,7 @@ def test_pay_while_opening_channel(node_factory, bitcoind, executor):
     l1.rpc.pay(inv['bolt11'])
 
 
-def test_offer_paths(node_factory, bitcoind):
+def test_offer_paths(node_factory, bitnetd):
     opts = {'dev-allow-localhost': None}
 
     # Need to announce channels to use their scid in offers anyway!
@@ -5719,7 +5719,7 @@ def test_offer_paths(node_factory, bitcoind):
 
     # Make scid path invalid by closing it
     close = l1.rpc.close(paths[0]['first_scid'])
-    bitcoind.generate_block(13, wait_for_mempool=only_one(close['txids']))
+    bitnetd.generate_block(13, wait_for_mempool=only_one(close['txids']))
     wait_for(lambda: l5.rpc.listchannels(paths[0]['first_scid']) == {'channels': []})
 
     # Now connect l5->l4, and it will be able to reach l3 via that, and join blinded path.
@@ -5741,7 +5741,7 @@ def test_offer_paths(node_factory, bitcoind):
         l5.rpc.fetchinvoice(offer=offer['bolt12'])
 
 
-def test_pay_legacy_forward(node_factory, bitcoind, executor):
+def test_pay_legacy_forward(node_factory, bitnetd, executor):
     """We removed legacy in 22.11, and LND will still send them for
     route hints!  See
     https://github.com/lightningnetwork/lnd/issues/8785
@@ -6626,7 +6626,7 @@ def test_injectpaymentonion_failures(node_factory, executor):
     assert 'onionreply' in err.value.error['data']
 
 
-def test_parallel_channels_reserve(node_factory, bitcoind):
+def test_parallel_channels_reserve(node_factory, bitnetd):
     """Tests wether we are able to pay through parallel channels concurrently.
     To do that we need to enable strict-forwarding."""
 
@@ -6664,8 +6664,8 @@ def test_parallel_channels_reserve(node_factory, bitcoind):
     c23.append(l2.rpc.fundchannel(l3.info["id"], 1000_000, minconf=0)["channel_id"])
     c23.append(l2.rpc.fundchannel(l3.info["id"], 2000_000, minconf=0)["channel_id"])
 
-    bitcoind.generate_block(6)
-    sync_blockheight(bitcoind, [l1, l2, l3])
+    bitnetd.generate_block(6)
+    sync_blockheight(bitnetd, [l1, l2, l3])
 
     scids.append(get_local_channel_by_id(l1, c12)["short_channel_id"])
     scids.append(get_local_channel_by_id(l2, c23[0])["short_channel_id"])
@@ -6734,7 +6734,7 @@ def test_parallel_channels_reserve(node_factory, bitcoind):
     assert receipt["amount_received_msat"] == total_msat
 
 
-def test_fetchinvoice_with_payer_metadata(node_factory, bitcoind):
+def test_fetchinvoice_with_payer_metadata(node_factory, bitnetd):
     # We remove the conversion plugin on l3, causing it to get upset.
     l1, l2 = node_factory.line_graph(2, wait_for_announce=True)
 
@@ -6763,7 +6763,7 @@ def test_fetchinvoice_with_payer_metadata(node_factory, bitcoind):
     assert decode1['invreq_payer_id'] == decode3['invreq_payer_id']
 
 
-def test_pay_unannounced_routehint(node_factory, bitcoind):
+def test_pay_unannounced_routehint(node_factory, bitnetd):
     """Tests whether sender can pay recipient through unannounced channels with
     2 hops where the second hop uses a route hint."""
 

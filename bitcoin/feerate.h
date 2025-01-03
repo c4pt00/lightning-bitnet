@@ -5,19 +5,19 @@
 #include <ccan/short_types/short_types.h>
 #include <common/amount.h>
 
-/* bitcoind considers 250 satoshi per kw to be the minimum acceptable fee:
+/* bitnetd considers 250 satoshi per kw to be the minimum acceptable fee:
  * less than this won't even relay.
  */
 #define BITCOIND_MINRELAYTXFEE_PER_KW 250
 /*
- * But bitcoind uses vbytes (ie. (weight + 3) / 4) for this
+ * But bitnetd uses vbytes (ie. (weight + 3) / 4) for this
  * calculation, rather than weight, meaning we can disagree since we do
  * it sanely (as specified in BOLT #3).
  */
 #define FEERATE_BITCOIND_SEES(feerate, weight) \
 	(((feerate) * (weight)) / 1000 * 1000 / ((weight) + 3))
 /* ie. fee = (feerate * weight) // 1000
- * bitcoind needs (worst-case): fee * 1000 / (weight + 3) >= 250
+ * bitnetd needs (worst-case): fee * 1000 / (weight + 3) >= 250
  *
  * (feerate * weight) // 1000 * 1000 // (weight + 3) >= 250
  *
@@ -41,7 +41,7 @@ enum feerate_style {
 
 static inline u32 feerate_floor_check(void)
 {
-	/* Assert that bitcoind will see this as above minRelayTxFee */
+	/* Assert that bitnetd will see this as above minRelayTxFee */
 	BUILD_ASSERT(FEERATE_BITCOIND_SEES(FEERATE_FLOOR, MINIMUM_TX_WEIGHT)
 		     >= BITCOIND_MINRELAYTXFEE_PER_KW);
 	/* And a lesser value won't do */

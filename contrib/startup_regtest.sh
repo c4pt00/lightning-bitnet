@@ -1,7 +1,7 @@
 #!/bin/sh
 
 ## Short script to startup some local nodes with
-## bitcoind, all running on regtest
+## bitnetd, all running on regtest
 ## Makes it easier to test things out, by hand.
 
 ## Should be called by source since it sets aliases
@@ -98,19 +98,19 @@ fi
 # shellcheck disable=SC2153
 if [ -z "$BITCOIN_BIN" ]; then
 	# Already installed maybe?  Prints
-	if ! type bitcoin-cli >/dev/null 2>&1 ; then
-		echo bitcoin-cli: not found
+	if ! type bitnet-cli >/dev/null 2>&1 ; then
+		echo bitnet-cli: not found
 		return 1
 	fi
-	if ! type bitcoind >/dev/null 2>&1 ; then
-		echo bitcoind: not found
+	if ! type bitnetd >/dev/null 2>&1 ; then
+		echo bitnetd: not found
 		return 1
 	fi
-	BCLI=bitcoin-cli
-	BITCOIND=bitcoind
+	BCLI=bitnet-cli
+	BITCOIND=bitnetd
 else
-    BCLI="$BITCOIN_BIN"/bitcoin-cli
-    BITCOIND="$BITCOIN_BIN"/bitcoind
+    BCLI="$BITCOIN_BIN"/bitnet-cli
+    BITCOIND="$BITCOIN_BIN"/bitnetd
 fi
 
 
@@ -121,8 +121,8 @@ export LCLI="$LCLI"
 export LIGHTNINGD="$LIGHTNINGD"
 export LIGHTNING_DIR="$LIGHTNING_DIR"
 
-echo bitcoin-cli is "$BCLI"
-echo bitcoind is "$BITCOIND"
+echo bitnet-cli is "$BCLI"
+echo bitnetd is "$BITCOIND"
 echo bitcoin-dir is "$BITCOIN_DIR"
 export BCLI="$BCLI"
 export BITCOIND="$BITCOIND"
@@ -192,7 +192,7 @@ start_nodes() {
 		allow-deprecated-apis=false
 		developer
 		dev-fast-gossip
-		dev-bitcoind-poll=5
+		dev-bitnetd-poll=5
 		experimental-dual-fund
 		experimental-splicing
 		funder-policy=match
@@ -237,23 +237,23 @@ funder-lease-requests-only=false
 }
 
 start_ln() {
-	# Start bitcoind in the background
-	test -f "$BITCOIN_DIR/regtest/bitcoind.pid" || \
+	# Start bitnetd in the background
+	test -f "$BITCOIN_DIR/regtest/bitnetd.pid" || \
 		"$BITCOIND" -datadir="$BITCOIN_DIR" -regtest -txindex -fallbackfee=0.00000253 -daemon
 
 	# Wait for it to start.
-	while ! "$BCLI" -datadir="$BITCOIN_DIR" -regtest ping 2> /tmp/null; do echo "awaiting bitcoind..." && sleep 1; done
+	while ! "$BCLI" -datadir="$BITCOIN_DIR" -regtest ping 2> /tmp/null; do echo "awaiting bitnetd..." && sleep 1; done
 
 	# Check if default wallet exists
 	if ! "$BCLI" -datadir="$BITCOIN_DIR" -regtest listwalletdir | jq -r '.wallets[] | .name' | grep -wqe 'default' ; then
 		# wallet dir does not exist, create one
-		echo "Making \"default\" bitcoind wallet."
+		echo "Making \"default\" bitnetd wallet."
 		"$BCLI" -datadir="$BITCOIN_DIR" -regtest createwallet default >/dev/null 2>&1
 	fi
 
 	# Check if default wallet is loaded
 	if ! "$BCLI" -datadir="$BITCOIN_DIR" -regtest listwallets | jq -r '.[]' | grep -wqe 'default' ; then
-		echo "Loading \"default\" bitcoind wallet."
+		echo "Loading \"default\" bitnetd wallet."
 		"$BCLI" -datadir="$BITCOIN_DIR" -regtest loadwallet default >/dev/null 2>&1
 	fi
 
@@ -288,7 +288,7 @@ start_ln() {
 	fi
 }
 
-ensure_bitcoind_funds() {
+ensure_bitnetd_funds() {
 
 	if [ -z "$ADDRESS" ]; then
 		ADDRESS=$("$BCLI" -datadir="$BITCOIN_DIR" -regtest "$WALLET" getnewaddress)
@@ -329,9 +329,9 @@ fund_nodes() {
 
 	ADDRESS=$("$BCLI" -datadir="$BITCOIN_DIR" -regtest "$WALLET" getnewaddress)
 
-	ensure_bitcoind_funds
+	ensure_bitnetd_funds
 
-	echo "bitcoind balance:" "$("$BCLI" -datadir="$BITCOIN_DIR" -regtest "$WALLET" getbalance)"
+	echo "bitnetd balance:" "$("$BCLI" -datadir="$BITCOIN_DIR" -regtest "$WALLET" getbalance)"
 
 	last_node=""
 
@@ -354,7 +354,7 @@ fund_nodes() {
 		L1_WALLET_ADDR=$($LCLI -F --lightning-dir=$LIGHTNING_DIR/l"$node1" newaddr | sed -n 's/^bech32=\(.*\)/\1/p')
 		L2_WALLET_ADDR=$($LCLI -F --lightning-dir=$LIGHTNING_DIR/l"$node2" newaddr | sed -n 's/^bech32=\(.*\)/\1/p')
 
-		ensure_bitcoind_funds
+		ensure_bitnetd_funds
 
 		"$BCLI" -datadir="$BITCOIN_DIR" -regtest "$WALLET" sendtoaddress "$L1_WALLET_ADDR" 1 > /dev/null
 		"$BCLI" -datadir="$BITCOIN_DIR" -regtest "$WALLET" sendtoaddress "$L2_WALLET_ADDR" 1 > /dev/null
@@ -408,9 +408,9 @@ stop_nodes() {
 
 stop_ln() {
 	stop_nodes "$@"
-	test ! -f "$BITCOIN_DIR/regtest/bitcoind.pid" || \
-		(kill "$(cat "$BITCOIN_DIR/regtest/bitcoind.pid")"; \
-		rm "$BITCOIN_DIR/regtest/bitcoind.pid")
+	test ! -f "$BITCOIN_DIR/regtest/bitnetd.pid" || \
+		(kill "$(cat "$BITCOIN_DIR/regtest/bitnetd.pid")"; \
+		rm "$BITCOIN_DIR/regtest/bitnetd.pid")
 
 	unset LN_NODES
 	unalias bt-cli
@@ -465,9 +465,9 @@ start_elem() {
 
 stop_elem() {
 	stop_nodes "$1" liquid-regtest
-	test ! -f "$ELEMENTS_DIR/liquid-regtest/bitcoind.pid" || \
-		(kill "$(cat "$ELEMENTS_DIR/liquid-regtest/bitcoind.pid")"; \
-		rm "$ELEMENTS_DIR/liquid-regtest/bitcoind.pid")
+	test ! -f "$ELEMENTS_DIR/liquid-regtest/bitnetd.pid" || \
+		(kill "$(cat "$ELEMENTS_DIR/liquid-regtest/bitnetd.pid")"; \
+		rm "$ELEMENTS_DIR/liquid-regtest/bitnetd.pid")
 
 	unset LN_NODES
 	unalias et-cli

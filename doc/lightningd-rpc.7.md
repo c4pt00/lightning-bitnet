@@ -110,7 +110,7 @@ referred to in addition to simple JSON types:
 * `point32`: a 64-character `hex` which represents an x-only pubkey.
 * `short_channel_id`: a string of form BLOCK "x" TXNUM "x" OUTNUM.
 * `short_channel_id_dir`: a `short_channel_id` with "/0" or "/1" appended, indicating the direction between peers.
-* `outpoint`: a string containing a `txid` followed by a ":" and an output number (bitcoind uses this form).
+* `outpoint`: a string containing a `txid` followed by a ":" and an output number (bitnetd uses this form).
 * `feerate`: an integer, or a string consisting of a number followed by "perkw" or "perkb".
 * `outputdesc`: an object containing onchain addresses as keys, and "all" or a valid `msat` field as values.
 

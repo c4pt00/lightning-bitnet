@@ -356,7 +356,7 @@
           ]
         }
       },
-      "warning_bitcoind_sync": {
+      "warning_bitnetd_sync": {
         "type": "string",
         "description": [
           "Bitcoind is not up-to-date with network."
@@ -365,7 +365,7 @@
       "warning_lightningd_sync": {
         "type": "string",
         "description": [
-          "Lightningd is still loading latest blocks from bitcoind."
+          "Lightningd is still loading latest blocks from bitnetd."
         ]
       }
     }

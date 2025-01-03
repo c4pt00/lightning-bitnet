@@ -1,4 +1,4 @@
-""" A bitcoind proxy that allows instrumentation and canned responses
+""" A bitnetd proxy that allows instrumentation and canned responses
 """
 from flask import Flask, request  # type: ignore
 from bitcoin.rpc import JSONRPCError  # type: ignore
@@ -23,17 +23,17 @@ class DecimalEncoder(json.JSONEncoder):
 
 
 class BitcoinRpcProxy(object):
-    def __init__(self, bitcoind, rpcport=0):
+    def __init__(self, bitnetd, rpcport=0):
         self.app = Flask("BitcoindProxy")
         self.app.add_url_rule("/", "API entrypoint", self.proxy, methods=['POST'])
         self.rpcport = rpcport
         self.mocks = {}
         self.mock_counts = {}
-        self.bitcoind = bitcoind
+        self.bitnetd = bitnetd
         self.request_count = 0
 
     def _handle_request(self, r):
-        brpc = BitcoinProxy(btc_conf_file=self.bitcoind.conf_file)
+        brpc = BitcoinProxy(btc_conf_file=self.bitnetd.conf_file)
         method = r['method']
 
         # If we have set a mock for this method reply with that instead of
@@ -83,13 +83,13 @@ class BitcoinRpcProxy(object):
         self.proxy_thread.daemon = True
         self.proxy_thread.start()
 
-        # Now that bitcoind is running on the real rpcport, let's tell all
+        # Now that bitnetd is running on the real rpcport, let's tell all
         # future callers to talk to the proxyport. We use the bind_addr as a
         # signal that the port is bound and accepting connections.
         while self.server.bind_addr[1] == 0:
             pass
         self.rpcport = self.server.bind_addr[1]
-        logging.debug("BitcoinRpcProxy proxying incoming port {} to {}".format(self.rpcport, self.bitcoind.rpcport))
+        logging.debug("BitcoinRpcProxy proxying incoming port {} to {}".format(self.rpcport, self.bitnetd.rpcport))
 
     def stop(self):
         self.server.stop()
@@ -101,7 +101,7 @@ class BitcoinRpcProxy(object):
 
         The response can either be a dict with the full JSON-RPC response, or a
         function that returns such a response. If the response is None the mock
-        is removed and future calls will be passed through to bitcoind again.
+        is removed and future calls will be passed through to bitnetd again.
 
         """
         if response is not None:

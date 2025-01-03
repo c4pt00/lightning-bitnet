@@ -1801,7 +1801,7 @@ static const char **seednames(const tal_t *ctx, const struct node_id *id)
  * resolve a node name when they say to connect to it.  This is synchronous,
  * so connectd blocks, but it's not very common so we haven't fixed it.
  *
- * This "seed by DNS" approach is similar to what bitcoind uses, and in fact
+ * This "seed by DNS" approach is similar to what bitnetd uses, and in fact
  * has the nice property that DNS is cached, and the seed only sees a request
  * from the ISP, not directly from the user. */
 static void add_seed_addrs(struct wireaddr_internal **addrs,

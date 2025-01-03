@@ -296,7 +296,7 @@ def test_cln_plugin_reentrant(node_factory, executor):
     assert f2.result(timeout=TIMEOUT)
 
 
-def test_grpc_keysend_routehint(bitcoind, node_factory):
+def test_grpc_keysend_routehint(bitnetd, node_factory):
     """The routehints are a bit special, test that conversions work.
 
     3 node line graph, with l1 as the keysend sender and l3 the
@@ -307,8 +307,8 @@ def test_grpc_keysend_routehint(bitcoind, node_factory):
         3,
         announce_channels=True,  # Do not enforce scid-alias
     )
-    bitcoind.generate_block(3)
-    sync_blockheight(bitcoind, [l1, l2, l3])
+    bitnetd.generate_block(3)
+    sync_blockheight(bitnetd, [l1, l2, l3])
 
     chan = l2.rpc.listpeerchannels(l3.info['id'])
 
@@ -339,7 +339,7 @@ def test_grpc_keysend_routehint(bitcoind, node_factory):
     print(res)
 
 
-def test_grpc_listpeerchannels(bitcoind, node_factory):
+def test_grpc_listpeerchannels(bitnetd, node_factory):
     """ Check that conversions of this rather complex type work.
     """
     l1, l2 = node_factory.line_graph(
@@ -361,7 +361,7 @@ def test_grpc_listpeerchannels(bitcoind, node_factory):
 
     res = stub.Close(clnpb.CloseRequest(id=l2.info['id']))
 
-    bitcoind.generate_block(100, wait_for_mempool=1)
+    bitnetd.generate_block(100, wait_for_mempool=1)
     l1.daemon.wait_for_log(r'onchaind complete, forgetting peer')
 
     stub.ListClosedChannels(clnpb.ListclosedchannelsRequest())
@@ -393,13 +393,13 @@ def test_rust_plugin_subscribe_wildcard(node_factory):
     l1.daemon.wait_for_log("Received notification connect")
 
 
-def test_grpc_block_added_notifications(node_factory, bitcoind):
+def test_grpc_block_added_notifications(node_factory, bitnetd):
     l1 = node_factory.get_node()
 
     # Test the block_added notification
     # Start listening to block added events over grpc
     block_added_stream = l1.grpc.SubscribeBlockAdded(clnpb.StreamBlockAddedRequest())
-    bitcoind.generate_block(10)
+    bitnetd.generate_block(10)
     for block_added_event in block_added_stream:
         assert block_added_event.hash is not None
         assert block_added_event.height is not None

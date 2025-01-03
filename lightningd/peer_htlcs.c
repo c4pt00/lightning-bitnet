@@ -506,9 +506,9 @@ static void handle_localpay(struct htlc_in *hin,
 		 * the payload, the erring node may include that `type` and its byte `offset` in
 		 * the decrypted byte stream.
 		 */
-		failmsg = towire_invalid_onion_payload(NULL, TLV_PAYLOAD_PAYMENT_METADATA,
-						       /* FIXME: offset? */ 0);
-		goto fail;
+	////	failmsg = towire_invalid_onion_payload(NULL, TLV_PAYLOAD_PAYMENT_METADATA,
+	//					       /* FIXME: offset? */ 0);
+	//	goto fail;
 	}
 
 	htlc_set_add(ld, hin->key.channel->log,
@@ -1176,10 +1176,10 @@ htlc_accepted_hook_final(struct htlc_accepted_hook_payload *request STEALS)
 			  "Failing HTLC because of an invalid payload (TLV %"PRIu64" pos %zu): %s",
 			  request->failtlvtype, request->failtlvpos,
 			  request->failexplanation);
-		local_fail_in_htlc(hin,
-				   take(towire_invalid_onion_payload(
-						NULL, request->failtlvtype,
-						request->failtlvpos)));
+		//local_fail_in_htlc(hin,
+		//		   take(towire_invalid_onion_payload(
+		//				NULL, request->failtlvtype,
+		//				request->failtlvpos)));
 	} else if (rs->nextcase == ONION_FORWARD) {
 		forward_htlc(hin, hin->cltv_expiry,
 			     request->payload->amt_to_forward,

@@ -71,13 +71,13 @@ Alternatively, you can [setup a TOR hidden service](doc:tor) for your node that 
 
 No.
 
-### Can I use a single `bitcoind` for multiple `lightningd` ?
+### Can I use a single `bitnetd` for multiple `lightningd` ?
 
-Yes. All `bitcoind` calls are handled by the bundled `bcli` plugin. `lightningd` does not use `bitcoind`'s wallet. While on the topic, `lightningd` does not require the `-txindex` option on `bitcoind`.
+Yes. All `bitnetd` calls are handled by the bundled `bcli` plugin. `lightningd` does not use `bitnetd`'s wallet. While on the topic, `lightningd` does not require the `-txindex` option on `bitnetd`.
 
-If you use a single `bitcoind` for multiple `lightningd`'s, be sure to raise the `bitcoind`  
+If you use a single `bitnetd` for multiple `lightningd`'s, be sure to raise the `bitnetd`  
 max RPC thread limit (`-rpcthreads`), each `lightningd` can use up to 4 threads, which is  
-the default `bitcoind` max.
+the default `bitnetd` max.
 
 ### Can I use Core Lightning on mobile ?
 
@@ -180,10 +180,10 @@ If you don't want to wait for the channel to confirm, you could forget the chann
 
 There are 3 types of 'rescans' you can make:
 
-- `rescanblockchain`: A `bitcoind` RPC call which rescans the blockchain starting at the given height. This does not have an effect on Core Lightning as `lightningd` tracks all block and wallet data independently.
+- `rescanblockchain`: A `bitnetd` RPC call which rescans the blockchain starting at the given height. This does not have an effect on Core Lightning as `lightningd` tracks all block and wallet data independently.
 - `--rescan=depth`: A `lightningd` configuration flag. This flag is read at node startup and tells lightningd at what depth from current blockheight to rebuild its internal state.  
    (You can specify an exact block to start scanning from, instead of depth from current height, by using a negative number)
-- `dev-rescan-outputs`: A `lightningd` RPC call. Only available if your node has been started in developer mode (i.e. `--developer`). This will sync the state for known UTXOs in the `lightningd` wallet with `bitcoind`. As it only operates on outputs already seen on chain by the `lightningd` internal wallet, this will not find missing wallet funds.
+- `dev-rescan-outputs`: A `lightningd` RPC call. Only available if your node has been started in developer mode (i.e. `--developer`). This will sync the state for known UTXOs in the `lightningd` wallet with `bitnetd`. As it only operates on outputs already seen on chain by the `lightningd` internal wallet, this will not find missing wallet funds.
 
 ### Database corruption / channel state lost
 

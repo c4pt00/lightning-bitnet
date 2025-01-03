@@ -13,7 +13,7 @@ from utils import (
 @pytest.mark.openchannel('v2')
 @unittest.skipIf(TEST_NETWORK != 'regtest', 'elementsd doesnt yet support PSBT features we need')
 @flaky
-def test_splice(node_factory, bitcoind):
+def test_splice(node_factory, bitnetd):
     l1, l2 = node_factory.line_graph(2, fundamount=1000000, wait_for_announce=True, opts={'experimental-splicing': None})
 
     chan_id = l1.get_channel_id(l2)
@@ -32,11 +32,11 @@ def test_splice(node_factory, bitcoind):
     l2.daemon.wait_for_log(r'CHANNELD_NORMAL to CHANNELD_AWAITING_SPLICE')
     l1.daemon.wait_for_log(r'CHANNELD_NORMAL to CHANNELD_AWAITING_SPLICE')
 
-    mempool = bitcoind.rpc.getrawmempool(True)
+    mempool = bitnetd.rpc.getrawmempool(True)
     assert len(list(mempool.keys())) == 1
     assert result['txid'] in list(mempool.keys())
 
-    bitcoind.generate_block(6, wait_for_mempool=1)
+    bitnetd.generate_block(6, wait_for_mempool=1)
 
     l2.daemon.wait_for_log(r'CHANNELD_AWAITING_SPLICE to CHANNELD_NORMAL')
     l1.daemon.wait_for_log(r'CHANNELD_AWAITING_SPLICE to CHANNELD_NORMAL')
@@ -52,7 +52,7 @@ def test_splice(node_factory, bitcoind):
 @pytest.mark.openchannel('v1')
 @pytest.mark.openchannel('v2')
 @unittest.skipIf(TEST_NETWORK != 'regtest', 'elementsd doesnt yet support PSBT features we need')
-def test_splice_gossip(node_factory, bitcoind):
+def test_splice_gossip(node_factory, bitnetd):
     l1, l2, l3 = node_factory.line_graph(3, fundamount=1000000, wait_for_announce=True, opts={'experimental-splicing': None})
 
     chan_id = l1.get_channel_id(l2)
@@ -72,7 +72,7 @@ def test_splice_gossip(node_factory, bitcoind):
     wait_for(lambda: only_one(l2.rpc.listpeerchannels(l1.info['id'])['channels'])['state'] == 'CHANNELD_AWAITING_SPLICE')
     wait_for(lambda: only_one(l1.rpc.listpeerchannels(l2.info['id'])['channels'])['state'] == 'CHANNELD_AWAITING_SPLICE')
 
-    bitcoind.generate_block(6, wait_for_mempool=result['txid'])
+    bitnetd.generate_block(6, wait_for_mempool=result['txid'])
 
     # l3 will see channel dying, but still consider it OK for 12 blocks.
     l3.daemon.wait_for_log(f'gossipd: channel {pre_splice_scid} closing soon due to the funding outpoint being spent')
@@ -89,7 +89,7 @@ def test_splice_gossip(node_factory, bitcoind):
     wait_for(lambda: len(l3.rpc.listchannels(short_channel_id=post_splice_scid)['channels']) == 2)
     assert len(l3.rpc.listchannels(short_channel_id=pre_splice_scid)['channels']) == 2
 
-    bitcoind.generate_block(7)
+    bitnetd.generate_block(7)
 
     # The old channel should fall off l3's perspective
     wait_for(lambda: l3.rpc.listchannels(short_channel_id=pre_splice_scid)['channels'] == [])
@@ -113,7 +113,7 @@ def test_splice_gossip(node_factory, bitcoind):
 @pytest.mark.openchannel('v1')
 @pytest.mark.openchannel('v2')
 @unittest.skipIf(TEST_NETWORK != 'regtest', 'elementsd doesnt yet support PSBT features we need')
-def test_splice_listnodes(node_factory, bitcoind):
+def test_splice_listnodes(node_factory, bitnetd):
     # Here we do a splice but underfund it purposefully
     l1, l2 = node_factory.line_graph(2, fundamount=1000000, wait_for_announce=True, opts={'experimental-splicing': None})
 
@@ -136,12 +136,12 @@ def test_splice_listnodes(node_factory, bitcoind):
     assert len(l1.rpc.listnodes()['nodes']) == 2
     assert len(l2.rpc.listnodes()['nodes']) == 2
 
-    bitcoind.generate_block(6, wait_for_mempool=1)
+    bitnetd.generate_block(6, wait_for_mempool=1)
 
     l2.daemon.wait_for_log(r'CHANNELD_AWAITING_SPLICE to CHANNELD_NORMAL')
     l1.daemon.wait_for_log(r'CHANNELD_AWAITING_SPLICE to CHANNELD_NORMAL')
 
-    bitcoind.generate_block(7)
+    bitnetd.generate_block(7)
 
     wait_for(lambda: len(l1.rpc.listnodes()['nodes']) == 2)
     wait_for(lambda: len(l2.rpc.listnodes()['nodes']) == 2)
@@ -150,7 +150,7 @@ def test_splice_listnodes(node_factory, bitcoind):
 @pytest.mark.openchannel('v1')
 @pytest.mark.openchannel('v2')
 @unittest.skipIf(TEST_NETWORK != 'regtest', 'elementsd doesnt yet support PSBT features we need')
-def test_splice_out(node_factory, bitcoind):
+def test_splice_out(node_factory, bitnetd):
     l1, l2 = node_factory.line_graph(2, fundamount=1000000, wait_for_announce=True, opts={'experimental-splicing': None})
 
     chan_id = l1.get_channel_id(l2)
@@ -168,11 +168,11 @@ def test_splice_out(node_factory, bitcoind):
     l2.daemon.wait_for_log(r'CHANNELD_NORMAL to CHANNELD_AWAITING_SPLICE')
     l1.daemon.wait_for_log(r'CHANNELD_NORMAL to CHANNELD_AWAITING_SPLICE')
 
-    mempool = bitcoind.rpc.getrawmempool(True)
+    mempool = bitnetd.rpc.getrawmempool(True)
     assert len(list(mempool.keys())) == 1
     assert result['txid'] in list(mempool.keys())
 
-    bitcoind.generate_block(6, wait_for_mempool=1)
+    bitnetd.generate_block(6, wait_for_mempool=1)
 
     l2.daemon.wait_for_log(r'CHANNELD_AWAITING_SPLICE to CHANNELD_NORMAL')
     l1.daemon.wait_for_log(r'CHANNELD_AWAITING_SPLICE to CHANNELD_NORMAL')
@@ -188,7 +188,7 @@ def test_splice_out(node_factory, bitcoind):
 @pytest.mark.openchannel('v1')
 @pytest.mark.openchannel('v2')
 @unittest.skipIf(TEST_NETWORK != 'regtest', 'elementsd doesnt yet support PSBT features we need')
-def test_invalid_splice(node_factory, bitcoind):
+def test_invalid_splice(node_factory, bitnetd):
     # Here we do a splice but underfund it purposefully
     l1, l2 = node_factory.line_graph(2, fundamount=1000000, wait_for_announce=True, opts={'experimental-splicing': None,
                                                                                           'may_reconnect': True,
@@ -226,11 +226,11 @@ def test_invalid_splice(node_factory, bitcoind):
     result = l1.rpc.signpsbt(result['psbt'])
     result = l1.rpc.splice_signed(chan_id, result['signed_psbt'])
 
-    mempool = bitcoind.rpc.getrawmempool(True)
+    mempool = bitnetd.rpc.getrawmempool(True)
     assert len(list(mempool.keys())) == 1
     assert result['txid'] in list(mempool.keys())
 
-    bitcoind.generate_block(6, wait_for_mempool=1)
+    bitnetd.generate_block(6, wait_for_mempool=1)
 
     l2.daemon.wait_for_log(r'CHANNELD_AWAITING_SPLICE to CHANNELD_NORMAL')
     l1.daemon.wait_for_log(r'CHANNELD_AWAITING_SPLICE to CHANNELD_NORMAL')
@@ -247,7 +247,7 @@ def test_invalid_splice(node_factory, bitcoind):
 @pytest.mark.openchannel('v1')
 @pytest.mark.openchannel('v2')
 @unittest.skipIf(TEST_NETWORK != 'regtest', 'elementsd doesnt yet support PSBT features we need')
-def test_commit_crash_splice(node_factory, bitcoind):
+def test_commit_crash_splice(node_factory, bitnetd):
     # Here we do a normal splice out but force a restart after commiting.
     l1, l2 = node_factory.line_graph(2, fundamount=1000000, wait_for_announce=True, opts={'experimental-splicing': None,
                                                                                           'may_reconnect': True})
@@ -281,11 +281,11 @@ def test_commit_crash_splice(node_factory, bitcoind):
     l2.daemon.wait_for_log(r'CHANNELD_NORMAL to CHANNELD_AWAITING_SPLICE')
     l1.daemon.wait_for_log(r'CHANNELD_NORMAL to CHANNELD_AWAITING_SPLICE')
 
-    mempool = bitcoind.rpc.getrawmempool(True)
+    mempool = bitnetd.rpc.getrawmempool(True)
     assert len(list(mempool.keys())) == 1
     assert result['txid'] in list(mempool.keys())
 
-    bitcoind.generate_block(6, wait_for_mempool=1)
+    bitnetd.generate_block(6, wait_for_mempool=1)
 
     l2.daemon.wait_for_log(r'CHANNELD_AWAITING_SPLICE to CHANNELD_NORMAL')
     l1.daemon.wait_for_log(r'CHANNELD_AWAITING_SPLICE to CHANNELD_NORMAL')
@@ -305,7 +305,7 @@ def test_commit_crash_splice(node_factory, bitcoind):
 @pytest.mark.openchannel('v1')
 @pytest.mark.openchannel('v2')
 @unittest.skipIf(TEST_NETWORK != 'regtest', 'elementsd doesnt yet support PSBT features we need')
-def test_splice_stuck_htlc(node_factory, bitcoind, executor):
+def test_splice_stuck_htlc(node_factory, bitnetd, executor):
     l1, l2, l3 = node_factory.line_graph(3, wait_for_announce=True, opts={'experimental-splicing': None})
 
     l3.rpc.dev_ignore_htlcs(id=l2.info['id'], ignore=True)
@@ -332,14 +332,14 @@ def test_splice_stuck_htlc(node_factory, bitcoind, executor):
     l2.daemon.wait_for_log(r'CHANNELD_NORMAL to CHANNELD_AWAITING_SPLICE')
     l1.daemon.wait_for_log(r'CHANNELD_NORMAL to CHANNELD_AWAITING_SPLICE')
 
-    mempool = bitcoind.rpc.getrawmempool(True)
+    mempool = bitnetd.rpc.getrawmempool(True)
     assert len(list(mempool.keys())) == 1
     assert result['txid'] in list(mempool.keys())
 
-    bitcoind.generate_block(1, wait_for_mempool=1)
+    bitnetd.generate_block(1, wait_for_mempool=1)
     # Don't have l2, l3 reject channel_announcement as too far in future.
-    sync_blockheight(bitcoind, [l1, l2, l3])
-    bitcoind.generate_block(5)
+    sync_blockheight(bitnetd, [l1, l2, l3])
+    bitnetd.generate_block(5)
 
     l2.daemon.wait_for_log(r'CHANNELD_AWAITING_SPLICE to CHANNELD_NORMAL')
     l1.daemon.wait_for_log(r'CHANNELD_AWAITING_SPLICE to CHANNELD_NORMAL')

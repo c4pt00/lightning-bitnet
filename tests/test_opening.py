@@ -19,7 +19,7 @@ def find_next_feerate(node, peer):
 
 @unittest.skipIf(TEST_NETWORK != 'regtest', 'elementsd doesnt yet support PSBT features we need')
 @pytest.mark.openchannel('v2')
-def test_queryrates(node_factory, bitcoind):
+def test_queryrates(node_factory, bitnetd):
 
     opts = {'dev-no-reconnect': None}
 
@@ -56,7 +56,7 @@ def test_queryrates(node_factory, bitcoind):
 
 @unittest.skipIf(TEST_NETWORK != 'regtest', 'elementsd doesnt yet support PSBT features we need')
 @pytest.mark.openchannel('v1')  # Mixed v1 + v2, v2 manually turned on
-def test_multifunding_v2_best_effort(node_factory, bitcoind):
+def test_multifunding_v2_best_effort(node_factory, bitnetd):
     '''
     Check that best_effort flag works.
     '''
@@ -87,7 +87,7 @@ def test_multifunding_v2_best_effort(node_factory, bitcoind):
         min_channels = 1 if failed_sign else 2
         l1.rpc.multifundchannel(destinations, minchannels=min_channels)
 
-        bitcoind.generate_block(6, wait_for_mempool=1)
+        bitnetd.generate_block(6, wait_for_mempool=1)
 
         # l3 should fail to have channels; l2 also fails on last attempt
         node_list = [l1, l4] if failed_sign else [l1, l2, l4]
@@ -137,7 +137,7 @@ def test_multifunding_v2_best_effort(node_factory, bitcoind):
 
 @unittest.skipIf(TEST_NETWORK != 'regtest', 'elementsd doesnt yet support PSBT features we need')
 @pytest.mark.openchannel('v2')
-def test_v2_open_sigs_reconnect_2(node_factory, bitcoind):
+def test_v2_open_sigs_reconnect_2(node_factory, bitnetd):
     """ We test reconnect where L2 drops after sending their tx-sigs """
     disconnects_2 = ['+WIRE_TX_SIGNATURES']
 
@@ -149,8 +149,8 @@ def test_v2_open_sigs_reconnect_2(node_factory, bitcoind):
     l1.rpc.connect(l2.info['id'], 'localhost', l2.port)
     amount = 2**24
     chan_amount = 100000
-    bitcoind.rpc.sendtoaddress(l1.rpc.newaddr()['bech32'], amount / 10**8 + 0.01)
-    bitcoind.generate_block(1)
+    bitnetd.rpc.sendtoaddress(l1.rpc.newaddr()['bech32'], amount / 10**8 + 0.01)
+    bitnetd.generate_block(1)
     # Wait for it to arrive.
     wait_for(lambda: len(l1.rpc.listfunds()['outputs']) > 0)
 
@@ -164,7 +164,7 @@ def test_v2_open_sigs_reconnect_2(node_factory, bitcoind):
     l1.daemon.wait_for_log('Broadcasting funding tx')
     l2.daemon.wait_for_log('Broadcasting funding tx')
     txid = l2.rpc.listpeerchannels(l1.info['id'])['channels'][0]['funding_txid']
-    bitcoind.generate_block(6, wait_for_mempool=txid)
+    bitnetd.generate_block(6, wait_for_mempool=txid)
 
     # Make sure we're ok.
     l1.daemon.wait_for_log(r'to CHANNELD_NORMAL')
@@ -173,7 +173,7 @@ def test_v2_open_sigs_reconnect_2(node_factory, bitcoind):
 
 @unittest.skipIf(TEST_NETWORK != 'regtest', 'elementsd doesnt yet support PSBT features we need')
 @pytest.mark.openchannel('v2')
-def test_v2_open_sigs_reconnect_1(node_factory, bitcoind):
+def test_v2_open_sigs_reconnect_1(node_factory, bitnetd):
     """ We test reconnect where L2 drops while sending tx-sigs.
         Absolutely pure voodoo (the fundchannel command succeeds anyway after a
         reconnect) """
@@ -187,8 +187,8 @@ def test_v2_open_sigs_reconnect_1(node_factory, bitcoind):
     l1.rpc.connect(l2.info['id'], 'localhost', l2.port)
     amount = 2**24
     chan_amount = 100000
-    bitcoind.rpc.sendtoaddress(l1.rpc.newaddr()['bech32'], amount / 10**8 + 0.01)
-    bitcoind.generate_block(1)
+    bitnetd.rpc.sendtoaddress(l1.rpc.newaddr()['bech32'], amount / 10**8 + 0.01)
+    bitnetd.generate_block(1)
     # Wait for it to arrive.
     wait_for(lambda: len(l1.rpc.listfunds()['outputs']) > 0)
 
@@ -208,7 +208,7 @@ def test_v2_open_sigs_reconnect_1(node_factory, bitcoind):
     l1.daemon.wait_for_log('Broadcasting funding tx')
     l2.daemon.wait_for_log('Broadcasting funding tx')
     txid = l2.rpc.listpeerchannels(l1.info['id'])['channels'][0]['funding_txid']
-    bitcoind.generate_block(6, wait_for_mempool=txid)
+    bitnetd.generate_block(6, wait_for_mempool=txid)
 
     # Make sure we're ok.
     l1.daemon.wait_for_log(r'to CHANNELD_NORMAL')
@@ -217,7 +217,7 @@ def test_v2_open_sigs_reconnect_1(node_factory, bitcoind):
 
 @unittest.skipIf(TEST_NETWORK != 'regtest', 'elementsd doesnt yet support PSBT features we need')
 @pytest.mark.openchannel('v2')
-def test_v2_open_sigs_out_of_order(node_factory, bitcoind):
+def test_v2_open_sigs_out_of_order(node_factory, bitnetd):
     """ Test what happens if the tx-sigs get sent "before" commitment signed """
     disconnects = ['$WIRE_COMMITMENT_SIGNED']
 
@@ -228,8 +228,8 @@ def test_v2_open_sigs_out_of_order(node_factory, bitcoind):
     l1.rpc.connect(l2.info['id'], 'localhost', l2.port)
     amount = 2**24
     chan_amount = 100000
-    bitcoind.rpc.sendtoaddress(l1.rpc.newaddr()['bech32'], amount / 10**8 + 0.01)
-    bitcoind.generate_block(1)
+    bitnetd.rpc.sendtoaddress(l1.rpc.newaddr()['bech32'], amount / 10**8 + 0.01)
+    bitnetd.generate_block(1)
     # Wait for it to arrive.
     wait_for(lambda: len(l1.rpc.listfunds()['outputs']) > 0)
 
@@ -247,7 +247,7 @@ def test_v2_open_sigs_out_of_order(node_factory, bitcoind):
 
 
 @pytest.mark.openchannel('v2')
-def test_v2_fail_second(node_factory, bitcoind):
+def test_v2_fail_second(node_factory, bitnetd):
     """ Open a channel succeeds; opening a second channel
     failure should not drop the connection """
     l1, l2 = node_factory.line_graph(2, wait_for_announce=True)
@@ -260,8 +260,8 @@ def test_v2_fail_second(node_factory, bitcoind):
 
     # make sure we can generate PSBTs.
     addr = l1.rpc.newaddr()['bech32']
-    bitcoind.rpc.sendtoaddress(addr, (amount + 1000000) / 10**8)
-    bitcoind.generate_block(1)
+    bitnetd.rpc.sendtoaddress(addr, (amount + 1000000) / 10**8)
+    bitnetd.generate_block(1)
     wait_for(lambda: len(l1.rpc.listfunds()["outputs"]) != 0)
 
     # Some random (valid) psbt
@@ -291,7 +291,7 @@ def test_v2_fail_second(node_factory, bitcoind):
 
 @unittest.skipIf(TEST_NETWORK != 'regtest', 'elementsd doesnt yet support PSBT features we need')
 @pytest.mark.openchannel('v2')
-def test_v2_open_sigs_restart_while_dead(node_factory, bitcoind):
+def test_v2_open_sigs_restart_while_dead(node_factory, bitnetd):
     # Same thing as above, except the transaction mines
     # while we're asleep
     disconnects_1 = ['-WIRE_TX_SIGNATURES']
@@ -308,8 +308,8 @@ def test_v2_open_sigs_restart_while_dead(node_factory, bitcoind):
     l1.rpc.connect(l2.info['id'], 'localhost', l2.port)
     amount = 2**24
     chan_amount = 100000
-    bitcoind.rpc.sendtoaddress(l1.rpc.newaddr()['bech32'], amount / 10**8 + 0.01)
-    bitcoind.generate_block(1)
+    bitnetd.rpc.sendtoaddress(l1.rpc.newaddr()['bech32'], amount / 10**8 + 0.01)
+    bitnetd.generate_block(1)
     # Wait for it to arrive.
     wait_for(lambda: len(l1.rpc.listfunds()['outputs']) > 0)
 
@@ -324,7 +324,7 @@ def test_v2_open_sigs_restart_while_dead(node_factory, bitcoind):
 
     l1.stop()
     l2.stop()
-    bitcoind.generate_block(6)
+    bitnetd.generate_block(6)
     l1.restart()
     l2.restart()
 
@@ -335,20 +335,20 @@ def test_v2_open_sigs_restart_while_dead(node_factory, bitcoind):
 
 @unittest.skipIf(TEST_NETWORK != 'regtest', 'elementsd doesnt yet support PSBT features we need')
 @pytest.mark.openchannel('v2')
-def test_v2_rbf_single(node_factory, bitcoind, chainparams):
+def test_v2_rbf_single(node_factory, bitnetd, chainparams):
     l1, l2 = node_factory.get_nodes(2)
 
     l1.rpc.connect(l2.info['id'], 'localhost', l2.port)
     amount = 2**24
     chan_amount = 100000
-    bitcoind.rpc.sendtoaddress(l1.rpc.newaddr()['bech32'], amount / 10**8 + 0.01)
-    bitcoind.generate_block(1)
+    bitnetd.rpc.sendtoaddress(l1.rpc.newaddr()['bech32'], amount / 10**8 + 0.01)
+    bitnetd.generate_block(1)
     # Wait for it to arrive.
     wait_for(lambda: len(l1.rpc.listfunds()['outputs']) > 0)
 
     res = l1.rpc.fundchannel(l2.info['id'], chan_amount)
     chan_id = res['channel_id']
-    vins = bitcoind.rpc.decoderawtransaction(res['tx'])['vin']
+    vins = bitnetd.rpc.decoderawtransaction(res['tx'])['vin']
     assert(only_one(vins))
     prev_utxos = ["{}:{}".format(vins[0]['txid'], vins[0]['vout'])]
 
@@ -410,8 +410,8 @@ def test_v2_rbf_single(node_factory, bitcoind, chainparams):
     signed_psbt = l1.rpc.signpsbt(update['psbt'])['signed_psbt']
     l1.rpc.openchannel_signed(chan_id, signed_psbt)
 
-    bitcoind.generate_block(1)
-    sync_blockheight(bitcoind, [l1])
+    bitnetd.generate_block(1)
+    sync_blockheight(bitnetd, [l1])
     l1.daemon.wait_for_log(' to CHANNELD_NORMAL')
 
     # Check that feerate info is gone
@@ -430,16 +430,16 @@ def test_v2_rbf_single(node_factory, bitcoind, chainparams):
 
 @unittest.skipIf(TEST_NETWORK != 'regtest', 'elementsd doesnt yet support PSBT features we need')
 @pytest.mark.openchannel('v2')
-def test_v2_rbf_abort_retry(node_factory, bitcoind, chainparams):
+def test_v2_rbf_abort_retry(node_factory, bitnetd, chainparams):
     l1, l2 = node_factory.get_nodes(2, opts={'allow_warning': True})
 
     l1.rpc.connect(l2.info['id'], 'localhost', l2.port)
     amount = 2**24
     chan_amount = 100000
-    bitcoind.rpc.sendmany("",
+    bitnetd.rpc.sendmany("",
                           {l1.rpc.newaddr()['bech32']: amount / 10**8 + 0.01,
                            l2.rpc.newaddr()['bech32']: amount / 10**8 + 0.01})
-    bitcoind.generate_block(1)
+    bitnetd.generate_block(1)
     # Wait for it to arrive.
     wait_for(lambda: len(l1.rpc.listfunds()['outputs']) > 0)
     wait_for(lambda: len(l2.rpc.listfunds()['outputs']) > 0)
@@ -453,7 +453,7 @@ def test_v2_rbf_abort_retry(node_factory, bitcoind, chainparams):
 
     res = l1.rpc.fundchannel(l2.info['id'], chan_amount)
     chan_id = res['channel_id']
-    vins = bitcoind.rpc.decoderawtransaction(res['tx'])['vin']
+    vins = bitnetd.rpc.decoderawtransaction(res['tx'])['vin']
     prev_utxos = ["{}:{}".format(vin['txid'], vin['vout']) for vin in vins if "{}:{}".format(vin['txid'], vin['vout']) in l1_utxos]
 
     # Check that we're waiting for lockin
@@ -501,8 +501,8 @@ def test_v2_rbf_abort_retry(node_factory, bitcoind, chainparams):
     signed_psbt = l1.rpc.signpsbt(update['psbt'])['signed_psbt']
     l1.rpc.openchannel_signed(chan_id, signed_psbt)
 
-    bitcoind.generate_block(1)
-    sync_blockheight(bitcoind, [l1])
+    bitnetd.generate_block(1)
+    sync_blockheight(bitnetd, [l1])
     l1.daemon.wait_for_log(' to CHANNELD_NORMAL')
     assert not l1.daemon.is_in_log('WIRE_CHANNEL_REESTABLISH')
     assert not l2.daemon.is_in_log('WIRE_CHANNEL_REESTABLISH')
@@ -510,17 +510,17 @@ def test_v2_rbf_abort_retry(node_factory, bitcoind, chainparams):
 
 @unittest.skipIf(TEST_NETWORK != 'regtest', 'elementsd doesnt yet support PSBT features we need')
 @pytest.mark.openchannel('v2')
-def test_v2_rbf_abort_channel_opens(node_factory, bitcoind, chainparams):
+def test_v2_rbf_abort_channel_opens(node_factory, bitnetd, chainparams):
     l1, l2 = node_factory.get_nodes(2, opts={'wumbo': None,
                                              'allow_warning': True})
 
     l1.rpc.connect(l2.info['id'], 'localhost', l2.port)
     amount = 2**24
     chan_amount = 100000
-    bitcoind.rpc.sendmany("",
+    bitnetd.rpc.sendmany("",
                           {l1.rpc.newaddr()['bech32']: amount / 10**8 + 0.01,
                            l2.rpc.newaddr()['bech32']: amount / 10**8 + 0.01})
-    bitcoind.generate_block(1)
+    bitnetd.generate_block(1)
     # Wait for it to arrive.
     wait_for(lambda: len(l1.rpc.listfunds()['outputs']) > 0)
     wait_for(lambda: len(l2.rpc.listfunds()['outputs']) > 0)
@@ -534,7 +534,7 @@ def test_v2_rbf_abort_channel_opens(node_factory, bitcoind, chainparams):
 
     res = l1.rpc.fundchannel(l2.info['id'], chan_amount)
     chan_id = res['channel_id']
-    vins = bitcoind.rpc.decoderawtransaction(res['tx'])['vin']
+    vins = bitnetd.rpc.decoderawtransaction(res['tx'])['vin']
     prev_utxos = ["{}:{}".format(vin['txid'], vin['vout']) for vin in vins if "{}:{}".format(vin['txid'], vin['vout']) in l1_utxos]
 
     # Check that we're waiting for lockin
@@ -561,14 +561,14 @@ def test_v2_rbf_abort_channel_opens(node_factory, bitcoind, chainparams):
 
     # When the original open tx is mined, we should still arrive at
     # NORMAL channel ops
-    bitcoind.generate_block(1)
-    sync_blockheight(bitcoind, [l1])
+    bitnetd.generate_block(1)
+    sync_blockheight(bitnetd, [l1])
     l1.daemon.wait_for_log(' to CHANNELD_NORMAL')
 
 
 @unittest.skipIf(TEST_NETWORK != 'regtest', 'elementsd doesnt yet support PSBT features we need')
 @pytest.mark.openchannel('v2')
-def test_v2_rbf_liquidity_ad(node_factory, bitcoind, chainparams):
+def test_v2_rbf_liquidity_ad(node_factory, bitnetd, chainparams):
 
     opts = {'funder-policy': 'match', 'funder-policy-mod': 100,
             'lease-fee-base-sat': '100sat', 'lease-fee-basis': 100,
@@ -640,7 +640,7 @@ def test_v2_rbf_liquidity_ad(node_factory, bitcoind, chainparams):
     only_one(l2.rpc.listdatastore("funder/{}".format(chan_id))['datastore'])
 
     # what happens when the channel opens?
-    bitcoind.generate_block(6)
+    bitnetd.generate_block(6)
     l1.daemon.wait_for_log('to CHANNELD_NORMAL')
 
     # Datastore should be cleaned up!
@@ -666,7 +666,7 @@ def test_v2_rbf_liquidity_ad(node_factory, bitcoind, chainparams):
 
 @unittest.skipIf(TEST_NETWORK != 'regtest', 'elementsd doesnt yet support PSBT features we need')
 @pytest.mark.openchannel('v2')
-def test_v2_rbf_multi(node_factory, bitcoind, chainparams):
+def test_v2_rbf_multi(node_factory, bitnetd, chainparams):
     l1, l2 = node_factory.get_nodes(2,
                                     opts={'may_reconnect': True,
                                           'dev-no-reconnect': None,
@@ -675,14 +675,14 @@ def test_v2_rbf_multi(node_factory, bitcoind, chainparams):
     l1.rpc.connect(l2.info['id'], 'localhost', l2.port)
     amount = 2**24
     chan_amount = 100000
-    bitcoind.rpc.sendtoaddress(l1.rpc.newaddr()['bech32'], amount / 10**8 + 0.01)
-    bitcoind.generate_block(1)
+    bitnetd.rpc.sendtoaddress(l1.rpc.newaddr()['bech32'], amount / 10**8 + 0.01)
+    bitnetd.generate_block(1)
     # Wait for it to arrive.
     wait_for(lambda: len(l1.rpc.listfunds()['outputs']) > 0)
 
     res = l1.rpc.fundchannel(l2.info['id'], chan_amount)
     chan_id = res['channel_id']
-    vins = bitcoind.rpc.decoderawtransaction(res['tx'])['vin']
+    vins = bitnetd.rpc.decoderawtransaction(res['tx'])['vin']
     assert(only_one(vins))
     prev_utxos = ["{}:{}".format(vins[0]['txid'], vins[0]['vout'])]
 
@@ -749,14 +749,14 @@ def test_v2_rbf_multi(node_factory, bitcoind, chainparams):
     signed_psbt = l1.rpc.signpsbt(update['psbt'])['signed_psbt']
     l1.rpc.openchannel_signed(chan_id, signed_psbt)
 
-    bitcoind.generate_block(1)
-    sync_blockheight(bitcoind, [l1])
+    bitnetd.generate_block(1)
+    sync_blockheight(bitnetd, [l1])
     l1.daemon.wait_for_log(' to CHANNELD_NORMAL')
 
 
 @unittest.skipIf(TEST_NETWORK != 'regtest', 'elementsd doesnt yet support PSBT features we need')
 @pytest.mark.openchannel('v2')
-def test_rbf_reconnect_init(node_factory, bitcoind, chainparams):
+def test_rbf_reconnect_init(node_factory, bitnetd, chainparams):
     disconnects = ['-WIRE_TX_INIT_RBF',
                    '+WIRE_TX_INIT_RBF']
 
@@ -768,14 +768,14 @@ def test_rbf_reconnect_init(node_factory, bitcoind, chainparams):
     l1.rpc.connect(l2.info['id'], 'localhost', l2.port)
     amount = 2**24
     chan_amount = 100000
-    bitcoind.rpc.sendtoaddress(l1.rpc.newaddr()['bech32'], amount / 10**8 + 0.01)
-    bitcoind.generate_block(1)
+    bitnetd.rpc.sendtoaddress(l1.rpc.newaddr()['bech32'], amount / 10**8 + 0.01)
+    bitnetd.generate_block(1)
     # Wait for it to arrive.
     wait_for(lambda: len(l1.rpc.listfunds()['outputs']) > 0)
 
     res = l1.rpc.fundchannel(l2.info['id'], chan_amount)
     chan_id = res['channel_id']
-    vins = bitcoind.rpc.decoderawtransaction(res['tx'])['vin']
+    vins = bitnetd.rpc.decoderawtransaction(res['tx'])['vin']
     assert(only_one(vins))
     prev_utxos = ["{}:{}".format(vins[0]['txid'], vins[0]['vout'])]
 
@@ -804,7 +804,7 @@ def test_rbf_reconnect_init(node_factory, bitcoind, chainparams):
 
 @unittest.skipIf(TEST_NETWORK != 'regtest', 'elementsd doesnt yet support PSBT features we need')
 @pytest.mark.openchannel('v2')
-def test_rbf_reconnect_ack(node_factory, bitcoind, chainparams):
+def test_rbf_reconnect_ack(node_factory, bitnetd, chainparams):
     disconnects = ['-WIRE_TX_ACK_RBF',
                    '+WIRE_TX_ACK_RBF']
 
@@ -816,14 +816,14 @@ def test_rbf_reconnect_ack(node_factory, bitcoind, chainparams):
     l1.rpc.connect(l2.info['id'], 'localhost', l2.port)
     amount = 2**24
     chan_amount = 100000
-    bitcoind.rpc.sendtoaddress(l1.rpc.newaddr()['bech32'], amount / 10**8 + 0.01)
-    bitcoind.generate_block(1)
+    bitnetd.rpc.sendtoaddress(l1.rpc.newaddr()['bech32'], amount / 10**8 + 0.01)
+    bitnetd.generate_block(1)
     # Wait for it to arrive.
     wait_for(lambda: len(l1.rpc.listfunds()['outputs']) > 0)
 
     res = l1.rpc.fundchannel(l2.info['id'], chan_amount)
     chan_id = res['channel_id']
-    vins = bitcoind.rpc.decoderawtransaction(res['tx'])['vin']
+    vins = bitnetd.rpc.decoderawtransaction(res['tx'])['vin']
     assert(only_one(vins))
     prev_utxos = ["{}:{}".format(vins[0]['txid'], vins[0]['vout'])]
 
@@ -852,7 +852,7 @@ def test_rbf_reconnect_ack(node_factory, bitcoind, chainparams):
 
 @unittest.skipIf(TEST_NETWORK != 'regtest', 'elementsd doesnt yet support PSBT features we need')
 @pytest.mark.openchannel('v2')
-def test_rbf_reconnect_tx_construct(node_factory, bitcoind, chainparams):
+def test_rbf_reconnect_tx_construct(node_factory, bitnetd, chainparams):
     disconnects = ['=WIRE_TX_ADD_INPUT',  # Initial funding succeeds
                    '-WIRE_TX_ADD_INPUT',
                    '+WIRE_TX_ADD_INPUT',
@@ -874,14 +874,14 @@ def test_rbf_reconnect_tx_construct(node_factory, bitcoind, chainparams):
     l1.rpc.connect(l2.info['id'], 'localhost', l2.port)
     amount = 2**24
     chan_amount = 100000
-    bitcoind.rpc.sendtoaddress(l1.rpc.newaddr()['bech32'], amount / 10**8 + 0.01)
-    bitcoind.generate_block(1)
+    bitnetd.rpc.sendtoaddress(l1.rpc.newaddr()['bech32'], amount / 10**8 + 0.01)
+    bitnetd.generate_block(1)
     # Wait for it to arrive.
     wait_for(lambda: len(l1.rpc.listfunds()['outputs']) > 0)
 
     res = l1.rpc.fundchannel(l2.info['id'], chan_amount)
     chan_id = res['channel_id']
-    vins = bitcoind.rpc.decoderawtransaction(res['tx'])['vin']
+    vins = bitnetd.rpc.decoderawtransaction(res['tx'])['vin']
     assert(only_one(vins))
     prev_utxos = ["{}:{}".format(vins[0]['txid'], vins[0]['vout'])]
 
@@ -963,7 +963,7 @@ def test_rbf_reconnect_tx_construct(node_factory, bitcoind, chainparams):
 
     l2.daemon.wait_for_log('Broadcasting funding tx')
     txid = l2.rpc.listpeerchannels(l1.info['id'])['channels'][0]['funding_txid']
-    bitcoind.generate_block(6, wait_for_mempool=txid)
+    bitnetd.generate_block(6, wait_for_mempool=txid)
 
     # Make sure we're ok.
     l1.daemon.wait_for_log(r'to CHANNELD_NORMAL')
@@ -972,7 +972,7 @@ def test_rbf_reconnect_tx_construct(node_factory, bitcoind, chainparams):
 
 @unittest.skipIf(TEST_NETWORK != 'regtest', 'elementsd doesnt yet support PSBT features we need')
 @pytest.mark.openchannel('v2')
-def test_rbf_reconnect_tx_sigs(node_factory, bitcoind, chainparams):
+def test_rbf_reconnect_tx_sigs(node_factory, bitnetd, chainparams):
     disconnects = ['=WIRE_TX_SIGNATURES',  # Initial funding succeeds
                    '-WIRE_TX_SIGNATURES',  # When we send tx-sigs, RBF
                    '=WIRE_TX_SIGNATURES',  # When we reconnect
@@ -995,14 +995,14 @@ def test_rbf_reconnect_tx_sigs(node_factory, bitcoind, chainparams):
     l1.rpc.connect(l2.info['id'], 'localhost', l2.port)
     amount = 2**24
     chan_amount = 100000
-    bitcoind.rpc.sendtoaddress(l1.rpc.newaddr()['bech32'], amount / 10**8 + 0.01)
-    bitcoind.generate_block(1)
+    bitnetd.rpc.sendtoaddress(l1.rpc.newaddr()['bech32'], amount / 10**8 + 0.01)
+    bitnetd.generate_block(1)
     # Wait for it to arrive.
     wait_for(lambda: len(l1.rpc.listfunds()['outputs']) > 0)
 
     res = l1.rpc.fundchannel(l2.info['id'], chan_amount)
     chan_id = res['channel_id']
-    vins = bitcoind.rpc.decoderawtransaction(res['tx'])['vin']
+    vins = bitnetd.rpc.decoderawtransaction(res['tx'])['vin']
     assert(only_one(vins))
     prev_utxos = ["{}:{}".format(vins[0]['txid'], vins[0]['vout'])]
 
@@ -1040,8 +1040,8 @@ def test_rbf_reconnect_tx_sigs(node_factory, bitcoind, chainparams):
     l2.daemon.wait_for_log('Broadcasting funding tx')
 
     # mine a block
-    bitcoind.generate_block(6, wait_for_mempool=1)
-    sync_blockheight(bitcoind, [l1])
+    bitnetd.generate_block(6, wait_for_mempool=1)
+    sync_blockheight(bitnetd, [l1])
     l1.daemon.wait_for_log(' to CHANNELD_NORMAL')
 
     # Check that they have matching funding txid
@@ -1052,7 +1052,7 @@ def test_rbf_reconnect_tx_sigs(node_factory, bitcoind, chainparams):
 
 @unittest.skipIf(TEST_NETWORK != 'regtest', 'elementsd doesnt yet support PSBT features we need')
 @pytest.mark.openchannel('v2')
-def test_rbf_to_chain_before_commit(node_factory, bitcoind, chainparams):
+def test_rbf_to_chain_before_commit(node_factory, bitnetd, chainparams):
     disconnects = ['=WIRE_TX_ADD_INPUT',  # Initial funding succeeds
                    '=WIRE_COMMITMENT_SIGNED',
                    '-WIRE_COMMITMENT_SIGNED']
@@ -1066,14 +1066,14 @@ def test_rbf_to_chain_before_commit(node_factory, bitcoind, chainparams):
     l1.rpc.connect(l2.info['id'], 'localhost', l2.port)
     amount = 2**24
     chan_amount = 100000
-    bitcoind.rpc.sendtoaddress(l1.rpc.newaddr()['bech32'], amount / 10**8 + 0.01)
-    bitcoind.generate_block(1)
+    bitnetd.rpc.sendtoaddress(l1.rpc.newaddr()['bech32'], amount / 10**8 + 0.01)
+    bitnetd.generate_block(1)
     # Wait for it to arrive.
     wait_for(lambda: len(l1.rpc.listfunds()['outputs']) > 0)
 
     res = l1.rpc.fundchannel(l2.info['id'], chan_amount)
     chan_id = res['channel_id']
-    vins = bitcoind.rpc.decoderawtransaction(res['tx'])['vin']
+    vins = bitnetd.rpc.decoderawtransaction(res['tx'])['vin']
     assert(only_one(vins))
     prev_utxos = ["{}:{}".format(vins[0]['txid'], vins[0]['vout'])]
 
@@ -1107,23 +1107,23 @@ def test_rbf_to_chain_before_commit(node_factory, bitcoind, chainparams):
     l1.daemon.wait_for_logs(['Broadcasting txid {}'.format(inflights[0]['scratch_txid']),
                              'sendrawtx exit 0'])
 
-    wait_for(lambda: inflights[0]['scratch_txid'] in bitcoind.rpc.getrawmempool())
-    assert inflights[0]['funding_txid'] in bitcoind.rpc.getrawmempool()
-    assert inflights[1]['funding_txid'] not in bitcoind.rpc.getrawmempool()
+    wait_for(lambda: inflights[0]['scratch_txid'] in bitnetd.rpc.getrawmempool())
+    assert inflights[0]['funding_txid'] in bitnetd.rpc.getrawmempool()
+    assert inflights[1]['funding_txid'] not in bitnetd.rpc.getrawmempool()
 
 
 @unittest.skipIf(TEST_NETWORK != 'regtest', 'elementsd doesnt yet support PSBT features we need')
 @pytest.mark.openchannel('v2')
-def test_rbf_no_overlap(node_factory, bitcoind, chainparams):
+def test_rbf_no_overlap(node_factory, bitnetd, chainparams):
     l1, l2 = node_factory.get_nodes(2,
                                     opts={'allow_warning': True})
 
     l1.rpc.connect(l2.info['id'], 'localhost', l2.port)
     amount = 2**24
     chan_amount = 100000
-    bitcoind.rpc.sendtoaddress(l1.rpc.newaddr()['bech32'], amount / 10**8 + 0.01)
-    bitcoind.rpc.sendtoaddress(l1.rpc.newaddr()['bech32'], amount / 10**8 + 0.01)
-    bitcoind.generate_block(1)
+    bitnetd.rpc.sendtoaddress(l1.rpc.newaddr()['bech32'], amount / 10**8 + 0.01)
+    bitnetd.rpc.sendtoaddress(l1.rpc.newaddr()['bech32'], amount / 10**8 + 0.01)
+    bitnetd.generate_block(1)
     # Wait for it to arrive.
     wait_for(lambda: len(l1.rpc.listfunds()['outputs']) > 0)
 
@@ -1150,7 +1150,7 @@ def test_rbf_no_overlap(node_factory, bitcoind, chainparams):
 
 @unittest.skipIf(TEST_NETWORK != 'regtest', 'elementsd doesnt yet support PSBT features we need')
 @pytest.mark.openchannel('v2')
-def test_rbf_fails_to_broadcast(node_factory, bitcoind, chainparams):
+def test_rbf_fails_to_broadcast(node_factory, bitnetd, chainparams):
     l1, l2 = node_factory.get_nodes(2,
                                     opts={'allow_warning': True,
                                           'may_reconnect': True})
@@ -1158,22 +1158,22 @@ def test_rbf_fails_to_broadcast(node_factory, bitcoind, chainparams):
     l1.rpc.connect(l2.info['id'], 'localhost', l2.port)
     amount = 2**24
     chan_amount = 100000
-    bitcoind.rpc.sendtoaddress(l1.rpc.newaddr()['bech32'], amount / 10**8 + 0.01)
-    bitcoind.generate_block(1)
+    bitnetd.rpc.sendtoaddress(l1.rpc.newaddr()['bech32'], amount / 10**8 + 0.01)
+    bitnetd.generate_block(1)
     # Wait for it to arrive.
     wait_for(lambda: len(l1.rpc.listfunds()['outputs']) > 0)
 
     # Really low feerate means that the bump wont work the first time
     res = l1.rpc.fundchannel(l2.info['id'], chan_amount, feerate='253perkw')
     chan_id = res['channel_id']
-    vins = bitcoind.rpc.decoderawtransaction(res['tx'])['vin']
+    vins = bitnetd.rpc.decoderawtransaction(res['tx'])['vin']
     assert(only_one(vins))
     prev_utxos = ["{}:{}".format(vins[0]['txid'], vins[0]['vout'])]
 
     # Check that we're waiting for lockin
     l1.daemon.wait_for_log(' to DUALOPEND_AWAITING_LOCKIN')
     inflights = only_one(l1.rpc.listpeerchannels()['channels'])['inflight']
-    assert inflights[-1]['funding_txid'] in bitcoind.rpc.getrawmempool()
+    assert inflights[-1]['funding_txid'] in bitnetd.rpc.getrawmempool()
 
     def run_retry():
         startweight = 42 + 173
@@ -1199,7 +1199,7 @@ def test_rbf_fails_to_broadcast(node_factory, bitcoind, chainparams):
     signed_psbt = run_retry()
     l1.rpc.openchannel_signed(chan_id, signed_psbt)
     inflights = only_one(l1.rpc.listpeerchannels()['channels'])['inflight']
-    assert inflights[-1]['funding_txid'] in bitcoind.rpc.getrawmempool()
+    assert inflights[-1]['funding_txid'] in bitnetd.rpc.getrawmempool()
 
     # Restart and listpeers, used to crash
     l1.restart()
@@ -1210,7 +1210,7 @@ def test_rbf_fails_to_broadcast(node_factory, bitcoind, chainparams):
     l1.rpc.openchannel_signed(chan_id, signed_psbt)
     inflights = only_one(l1.rpc.listpeerchannels()['channels'])['inflight']
     assert len(inflights) == 3
-    assert inflights[-1]['funding_txid'] in bitcoind.rpc.getrawmempool()
+    assert inflights[-1]['funding_txid'] in bitnetd.rpc.getrawmempool()
 
     l1.restart()
 
@@ -1218,7 +1218,7 @@ def test_rbf_fails_to_broadcast(node_factory, bitcoind, chainparams):
     prev_inflights = inflights
     inflights = only_one(l1.rpc.listpeerchannels()['channels'])['inflight']
     assert prev_inflights == inflights
-    assert inflights[-1]['funding_txid'] in bitcoind.rpc.getrawmempool()
+    assert inflights[-1]['funding_txid'] in bitnetd.rpc.getrawmempool()
 
     # Produce a signature for every inflight
     last_txs = l1.rpc.dev_sign_last_tx(l2.info['id'])
@@ -1230,7 +1230,7 @@ def test_rbf_fails_to_broadcast(node_factory, bitcoind, chainparams):
 
 @unittest.skipIf(TEST_NETWORK != 'regtest', 'elementsd doesnt yet support PSBT features we need')
 @pytest.mark.openchannel('v2')
-def test_rbf_broadcast_close_inflights(node_factory, bitcoind, chainparams):
+def test_rbf_broadcast_close_inflights(node_factory, bitnetd, chainparams):
     """
     Close a channel before it's mined, and the most recent transaction
     hasn't made it to the mempool. Should publish all the commitment
@@ -1242,21 +1242,21 @@ def test_rbf_broadcast_close_inflights(node_factory, bitcoind, chainparams):
     l1.rpc.connect(l2.info['id'], 'localhost', l2.port)
     amount = 2**24
     chan_amount = 100000
-    bitcoind.rpc.sendtoaddress(l1.rpc.newaddr()['bech32'], amount / 10**8 + 0.01)
-    bitcoind.generate_block(1)
+    bitnetd.rpc.sendtoaddress(l1.rpc.newaddr()['bech32'], amount / 10**8 + 0.01)
+    bitnetd.generate_block(1)
     # Wait for it to arrive.
     wait_for(lambda: len(l1.rpc.listfunds()['outputs']) > 0)
 
     res = l1.rpc.fundchannel(l2.info['id'], chan_amount, feerate='7500perkw')
     chan_id = res['channel_id']
-    vins = bitcoind.rpc.decoderawtransaction(res['tx'])['vin']
+    vins = bitnetd.rpc.decoderawtransaction(res['tx'])['vin']
     assert(only_one(vins))
     prev_utxos = ["{}:{}".format(vins[0]['txid'], vins[0]['vout'])]
 
     # Check that we're waiting for lockin
     l1.daemon.wait_for_log(' to DUALOPEND_AWAITING_LOCKIN')
     inflights = only_one(l1.rpc.listpeerchannels()['channels'])['inflight']
-    assert inflights[-1]['funding_txid'] in bitcoind.rpc.getrawmempool()
+    assert inflights[-1]['funding_txid'] in bitnetd.rpc.getrawmempool()
 
     # Make it such that l1 and l2 cannot broadcast transactions
     # (mimics failing to reach the miner with replacement)
@@ -1283,7 +1283,7 @@ def test_rbf_broadcast_close_inflights(node_factory, bitcoind, chainparams):
     signed_psbt = run_retry()
     l1.rpc.openchannel_signed(chan_id, signed_psbt)
     inflights = only_one(l1.rpc.listpeerchannels()['channels'])['inflight']
-    assert inflights[-1]['funding_txid'] not in bitcoind.rpc.getrawmempool()
+    assert inflights[-1]['funding_txid'] not in bitnetd.rpc.getrawmempool()
 
     cmtmt_txid = only_one(l1.rpc.listpeerchannels()['channels'])['scratch_txid']
     assert cmtmt_txid == inflights[-1]['scratch_txid']
@@ -1298,13 +1298,13 @@ def test_rbf_broadcast_close_inflights(node_factory, bitcoind, chainparams):
                              'Broadcasting txid {}'.format(inflights[1]['scratch_txid']),
                              'sendrawtx exit 0',
                              'sendrawtx exit 25'])
-    assert inflights[0]['scratch_txid'] in bitcoind.rpc.getrawmempool()
-    assert inflights[1]['scratch_txid'] not in bitcoind.rpc.getrawmempool()
+    assert inflights[0]['scratch_txid'] in bitnetd.rpc.getrawmempool()
+    assert inflights[1]['scratch_txid'] not in bitnetd.rpc.getrawmempool()
 
 
 @unittest.skipIf(TEST_NETWORK != 'regtest', 'elementsd doesnt yet support PSBT features we need')
 @pytest.mark.openchannel('v2')
-def test_rbf_non_last_mined(node_factory, bitcoind, chainparams):
+def test_rbf_non_last_mined(node_factory, bitnetd, chainparams):
     """
     What happens if a 'non-tip' RBF transaction is mined?
     """
@@ -1315,21 +1315,21 @@ def test_rbf_non_last_mined(node_factory, bitcoind, chainparams):
     l1.rpc.connect(l2.info['id'], 'localhost', l2.port)
     amount = 2**24
     chan_amount = 100000
-    bitcoind.rpc.sendtoaddress(l1.rpc.newaddr()['bech32'], amount / 10**8 + 0.01)
-    bitcoind.generate_block(1)
+    bitnetd.rpc.sendtoaddress(l1.rpc.newaddr()['bech32'], amount / 10**8 + 0.01)
+    bitnetd.generate_block(1)
     # Wait for it to arrive.
     wait_for(lambda: len(l1.rpc.listfunds()['outputs']) > 0)
 
     res = l1.rpc.fundchannel(l2.info['id'], chan_amount, feerate='7500perkw')
     chan_id = res['channel_id']
-    vins = bitcoind.rpc.decoderawtransaction(res['tx'])['vin']
+    vins = bitnetd.rpc.decoderawtransaction(res['tx'])['vin']
     assert only_one(vins)
     prev_utxos = ["{}:{}".format(vins[0]['txid'], vins[0]['vout'])]
 
     # Check that we're waiting for lockin
     l1.daemon.wait_for_log(' to DUALOPEND_AWAITING_LOCKIN')
     inflights = only_one(l1.rpc.listpeerchannels()['channels'])['inflight']
-    assert inflights[-1]['funding_txid'] in bitcoind.rpc.getrawmempool()
+    assert inflights[-1]['funding_txid'] in bitnetd.rpc.getrawmempool()
 
     def run_retry():
         startweight = 42 + 173
@@ -1378,7 +1378,7 @@ def test_rbf_non_last_mined(node_factory, bitcoind, chainparams):
     l2.stop()
 
     # The funding transaction gets mined (should be the 2nd inflight)
-    bitcoind.generate_block(6, wait_for_mempool=1)
+    bitnetd.generate_block(6, wait_for_mempool=1)
 
     # l2 comes back up
     l2.start()
@@ -1402,13 +1402,13 @@ def test_rbf_non_last_mined(node_factory, bitcoind, chainparams):
     l1.daemon.wait_for_log('Broadcasting txid {}'.format(channel['scratch_txid']))
 
     # The funding transaction gets mined (should be the 2nd inflight)
-    bitcoind.generate_block(1, wait_for_mempool=1)
+    bitnetd.generate_block(1, wait_for_mempool=1)
     l1.daemon.wait_for_log(r'to ONCHAIN')
 
 
 @unittest.skipIf(TEST_NETWORK != 'regtest', 'elementsd doesnt yet support PSBT features we need')
 @pytest.mark.openchannel('v2')
-def test_funder_options(node_factory, bitcoind):
+def test_funder_options(node_factory, bitnetd):
     l1, l2, l3 = node_factory.get_nodes(3)
     l1.fundwallet(10**7)
 
@@ -1473,7 +1473,7 @@ def test_funder_options(node_factory, bitcoind):
 
 
 @unittest.skipIf(TEST_NETWORK != 'regtest', 'elementsd doesnt yet support PSBT features we need')
-def test_funder_contribution_limits(node_factory, bitcoind):
+def test_funder_contribution_limits(node_factory, bitnetd):
     opts = {'experimental-dual-fund': None,
             'feerates': (5000, 5000, 5000, 5000)}
     l1, l2, l3 = node_factory.get_nodes(3, opts=opts)
@@ -1496,7 +1496,7 @@ def test_funder_contribution_limits(node_factory, bitcoind):
         addr, txid = l3.fundwallet(amt, mine_block=False)
         l3msgs.append('Owning output .* txid {} CONFIRMED'.format(txid))
 
-    bitcoind.generate_block(1)
+    bitnetd.generate_block(1)
     l1.daemon.wait_for_logs(l1msgs)
     l2.daemon.wait_for_logs(l2msgs)
     l3.daemon.wait_for_logs(l3msgs)
@@ -1535,7 +1535,7 @@ def test_funder_contribution_limits(node_factory, bitcoind):
 
 
 @pytest.mark.openchannel('v2')
-def test_inflight_dbload(node_factory, bitcoind):
+def test_inflight_dbload(node_factory, bitnetd):
     """Bad db field access breaks Postgresql on startup with opening leases"""
     disconnects = ["@WIRE_COMMITMENT_SIGNED"]
 
@@ -1564,7 +1564,7 @@ def test_inflight_dbload(node_factory, bitcoind):
     l1.restart()
 
 
-def test_zeroconf_mindepth(bitcoind, node_factory):
+def test_zeroconf_mindepth(bitnetd, node_factory):
     """Check that funder/fundee can customize mindepth.
 
     Zeroconf will use this to set the mindepth to 0, which coupled
@@ -1597,20 +1597,20 @@ def test_zeroconf_mindepth(bitcoind, node_factory):
     assert l1.db.query('SELECT minimum_depth FROM channels') == [{'minimum_depth': 6}]
     assert l2.db.query('SELECT minimum_depth FROM channels') == [{'minimum_depth': 2}]
 
-    bitcoind.generate_block(2, wait_for_mempool=1)  # Confirm on the l2 side.
+    bitnetd.generate_block(2, wait_for_mempool=1)  # Confirm on the l2 side.
     l2.daemon.wait_for_log(r'peer_out WIRE_CHANNEL_READY')
     # l1 should not be sending channel_ready yet, it is
     # configured to wait for 6 confirmations.
     assert not l1.daemon.is_in_log(r'peer_out WIRE_CHANNEL_READY')
 
-    bitcoind.generate_block(4)  # Confirm on the l2 side.
+    bitnetd.generate_block(4)  # Confirm on the l2 side.
     l1.daemon.wait_for_log(r'peer_out WIRE_CHANNEL_READY')
 
     wait_for(lambda: only_one(l1.rpc.listpeerchannels()['channels'])['state'] == "CHANNELD_NORMAL")
     wait_for(lambda: only_one(l2.rpc.listpeerchannels()['channels'])['state'] == "CHANNELD_NORMAL")
 
 
-def test_zeroconf_open(bitcoind, node_factory):
+def test_zeroconf_open(bitnetd, node_factory):
     """Let's open a zeroconf channel
 
     Just test that both parties opting in results in a channel that is
@@ -1685,7 +1685,7 @@ def test_zeroconf_open(bitcoind, node_factory):
     l3.rpc.pay(inv)
 
 
-def test_zeroconf_public(bitcoind, node_factory, chainparams):
+def test_zeroconf_public(bitnetd, node_factory, chainparams):
     """Test that we transition correctly from zeroconf to public
 
     The differences being that a public channel MUST use the public
@@ -1742,7 +1742,7 @@ def test_zeroconf_public(bitcoind, node_factory, chainparams):
         assert only_one(tx['outputs'])['output_tag'] == 'channel_proposed'
 
     # Now add 1 confirmation, we should get a `short_channel_id` (block 103)
-    bitcoind.generate_block(1)
+    bitnetd.generate_block(1)
     l1.daemon.wait_for_log(r'Funding tx [a-f0-9]{64} depth 1 of 0')
     l2.daemon.wait_for_log(r'Funding tx [a-f0-9]{64} depth 1 of 0')
 
@@ -1772,7 +1772,7 @@ def test_zeroconf_public(bitcoind, node_factory, chainparams):
 
     # Now make it public, we should be switching over to the real
     # scid.
-    bitcoind.generate_block(5)
+    bitnetd.generate_block(5)
     # Wait for l3 to learn about the channel, it'll have checked the
     # funding outpoint, scripts, etc.
     l3.connect(l1)
@@ -1780,14 +1780,14 @@ def test_zeroconf_public(bitcoind, node_factory, chainparams):
 
     # Close the zerconf channel, check that we mark it as onchain_resolved ok
     l1.rpc.close(l2.info['id'])
-    bitcoind.generate_block(1, wait_for_mempool=1)
+    bitnetd.generate_block(1, wait_for_mempool=1)
 
     # Channel should be marked resolved
     for n in [l1, l2]:
         wait_for(lambda: only_one([x for x in n.rpc.bkpr_listbalances()['accounts'] if x['account'] == channel_id])['account_resolved'])
 
 
-def test_zeroconf_forward(node_factory, bitcoind):
+def test_zeroconf_forward(node_factory, bitnetd):
     """Ensure that we can use zeroconf channels in forwards.
 
     Test that we add routehints using the zeroconf channel, and then
@@ -1809,7 +1809,7 @@ def test_zeroconf_forward(node_factory, bitcoind):
 
     l1.connect(l2)
     l1.fundchannel(l2, 10**6)
-    bitcoind.generate_block(6)
+    bitnetd.generate_block(6)
 
     l2.connect(l3)
     l2.fundwallet(10**7)
@@ -1818,7 +1818,7 @@ def test_zeroconf_forward(node_factory, bitcoind):
     wait_for(lambda: only_one(l3.rpc.listincoming()['incoming'])['incoming_capacity_msat'] != 0)
 
     # Make sure (esp in non-dev-mode) blockheights agree so we don't WIRE_EXPIRY_TOO_SOON...
-    sync_blockheight(bitcoind, [l1, l2, l3])
+    sync_blockheight(bitnetd, [l1, l2, l3])
     inv = l3.rpc.invoice(42 * 10**6, 'inv1', 'desc')['bolt11']
     l1.rpc.pay(inv)
 
@@ -1835,7 +1835,7 @@ def test_zeroconf_forward(node_factory, bitcoind):
 
 
 @pytest.mark.openchannel('v1')
-def test_buy_liquidity_ad_no_v2(node_factory, bitcoind):
+def test_buy_liquidity_ad_no_v2(node_factory, bitnetd):
     """ Test that you can't actually request amt for a
     node that doesn' support v2 opens """
 
@@ -1854,7 +1854,7 @@ def test_buy_liquidity_ad_no_v2(node_factory, bitcoind):
 
 
 @pytest.mark.openchannel('v2')
-def test_v2_replay_bookkeeping(node_factory, bitcoind):
+def test_v2_replay_bookkeeping(node_factory, bitnetd):
     """ Test that your bookkeeping for a liquidity ad is good
         even if we replay the opening and locking tx!
     """
@@ -1882,11 +1882,11 @@ def test_v2_replay_bookkeeping(node_factory, bitcoind):
                        compact_lease=rates['compact_lease'])
 
     # add the funding transaction
-    bitcoind.generate_block(4, wait_for_mempool=1)
+    bitnetd.generate_block(4, wait_for_mempool=1)
 
     l1.restart()
 
-    bitcoind.generate_block(2)
+    bitnetd.generate_block(2)
     l1.daemon.wait_for_log('to CHANNELD_NORMAL')
 
     chan_id = first_channel_id(l1, l2)
@@ -1896,8 +1896,8 @@ def test_v2_replay_bookkeeping(node_factory, bitcoind):
     # This should work ok
     l1.rpc.bkpr_listbalances()
 
-    bitcoind.generate_block(2)
-    sync_blockheight(bitcoind, [l1])
+    bitnetd.generate_block(2)
+    sync_blockheight(bitnetd, [l1])
 
     l1.restart()
 
@@ -1906,7 +1906,7 @@ def test_v2_replay_bookkeeping(node_factory, bitcoind):
     assert 'lease_fee' in ev_tags
 
     l1.rpc.close(l2.info['id'], 1)
-    bitcoind.generate_block(6, wait_for_mempool=1)
+    bitnetd.generate_block(6, wait_for_mempool=1)
 
     l1.daemon.wait_for_log(' to ONCHAIN')
     l2.daemon.wait_for_log(' to ONCHAIN')
@@ -1916,7 +1916,7 @@ def test_v2_replay_bookkeeping(node_factory, bitcoind):
 
 
 @pytest.mark.openchannel('v2')
-def test_buy_liquidity_ad_check_bookkeeping(node_factory, bitcoind):
+def test_buy_liquidity_ad_check_bookkeeping(node_factory, bitnetd):
     """ Test that your bookkeeping for a liquidity ad is good."""
 
     opts = [{'funder-policy': 'match', 'funder-policy-mod': 100,
@@ -1943,13 +1943,13 @@ def test_buy_liquidity_ad_check_bookkeeping(node_factory, bitcoind):
                        compact_lease=rates['compact_lease'])
 
     # add the funding transaction
-    bitcoind.generate_block(4, wait_for_mempool=1)
+    bitnetd.generate_block(4, wait_for_mempool=1)
 
     l1.stop()
     del l1.daemon.opts['disable-plugin']
     l1.start()
 
-    bitcoind.generate_block(2)
+    bitnetd.generate_block(2)
     l1.daemon.wait_for_log('to CHANNELD_NORMAL')
 
     chan_id = first_channel_id(l1, l2)
@@ -1960,7 +1960,7 @@ def test_buy_liquidity_ad_check_bookkeeping(node_factory, bitcoind):
     l1.rpc.bkpr_listbalances()
 
     l1.rpc.close(l2.info['id'], 1)
-    bitcoind.generate_block(6, wait_for_mempool=1)
+    bitnetd.generate_block(6, wait_for_mempool=1)
 
     l1.daemon.wait_for_log(' to ONCHAIN')
     l2.daemon.wait_for_log(' to ONCHAIN')
@@ -1969,7 +1969,7 @@ def test_buy_liquidity_ad_check_bookkeeping(node_factory, bitcoind):
     l1.rpc.bkpr_listbalances()
 
 
-def test_scid_alias_private(node_factory, bitcoind):
+def test_scid_alias_private(node_factory, bitnetd):
     """Test that we don't allow use of real scid for scid_alias-type channels"""
     l1, l2, l3 = node_factory.line_graph(3, fundchannel=False, opts=[{}, {},
                                                                      {'log-level': 'io'}])
@@ -1977,7 +1977,7 @@ def test_scid_alias_private(node_factory, bitcoind):
     l2.fundwallet(5000000)
     l2.rpc.fundchannel(l3.info['id'], 'all', announce=False)
 
-    bitcoind.generate_block(1, wait_for_mempool=1)
+    bitnetd.generate_block(1, wait_for_mempool=1)
     wait_for(lambda: only_one(l2.rpc.listpeerchannels(l3.info['id'])['channels'])['state'] == 'CHANNELD_NORMAL')
 
     chan = only_one(l2.rpc.listpeerchannels(l3.info['id'])['channels'])
@@ -1989,7 +1989,7 @@ def test_scid_alias_private(node_factory, bitcoind):
     # l2 (otherwise it sees it as a deadend!)
     l1.fundwallet(5000000)
     l1.rpc.fundchannel(l2.info['id'], 'all')
-    bitcoind.generate_block(6, wait_for_mempool=1)
+    bitnetd.generate_block(6, wait_for_mempool=1)
     wait_for(lambda: len(l3.rpc.listchannels(source=l1.info['id'])['channels']) == 1)
 
     chan = only_one(l1.rpc.listpeerchannels(l2.info['id'])['channels'])
@@ -2080,7 +2080,7 @@ def test_zeroconf_multichan_forward(node_factory):
                                .format(normal_scid, zeroconf_scid))
 
 
-def test_zeroreserve(node_factory, bitcoind):
+def test_zeroreserve(node_factory, bitnetd):
     """Ensure we can set the reserves.
 
     3 nodes:
@@ -2117,7 +2117,7 @@ def test_zeroreserve(node_factory, bitcoind):
     l1.rpc.fundchannel(l2.info['id'], 10**6, reserve='0sat')
     l2.rpc.fundchannel(l3.info['id'], 10**6)
     l3.rpc.fundchannel(l1.info['id'], 10**6, reserve='321sat')
-    bitcoind.generate_block(1, wait_for_mempool=3)
+    bitnetd.generate_block(1, wait_for_mempool=3)
     wait_for(lambda: l1.channel_state(l2) == 'CHANNELD_NORMAL')
     wait_for(lambda: l2.channel_state(l3) == 'CHANNELD_NORMAL')
     wait_for(lambda: l3.channel_state(l1) == 'CHANNELD_NORMAL')
@@ -2153,12 +2153,12 @@ def test_zeroreserve(node_factory, bitcoind):
     # closing should result in the output being trimmed again since we
     # dropped below dust again.
     c = l2.rpc.close(l1.info['id'])
-    decoded = bitcoind.rpc.decoderawtransaction(only_one(c['txs']))
+    decoded = bitnetd.rpc.decoderawtransaction(only_one(c['txs']))
     # Elements has a change output always
     assert len(decoded['vout']) == 1 if TEST_NETWORK == 'regtest' else 2
 
 
-def test_zeroreserve_mixed(node_factory, bitcoind):
+def test_zeroreserve_mixed(node_factory, bitnetd):
     """l1 runs with zeroreserve, l2 and l3 without, should still work
 
     Basically tests that l1 doesn't get upset when l2 allows us to
@@ -2235,14 +2235,14 @@ def test_zeroreserve_alldust(node_factory):
     l1.rpc.fundchannel(l2.info['id'], minfunding + 1)
 
 
-def test_coinbase_unspendable(node_factory, bitcoind):
+def test_coinbase_unspendable(node_factory, bitnetd):
     """ A node should not be able to spend a coinbase output
         before it's mature """
 
     [l1] = node_factory.get_nodes(1)
 
     addr = l1.rpc.newaddr()["bech32"]
-    bitcoind.rpc.generatetoaddress(1, addr)
+    bitnetd.rpc.generatetoaddress(1, addr)
 
     addr2 = l1.rpc.newaddr()["bech32"]
 
@@ -2255,29 +2255,29 @@ def test_coinbase_unspendable(node_factory, bitcoind):
         l1.rpc.withdraw(addr2, "all")
 
     # Nothing sent to the mempool!
-    assert len(bitcoind.rpc.getrawmempool()) == 0
+    assert len(bitnetd.rpc.getrawmempool()) == 0
 
     # Mine 98 blocks
-    bitcoind.rpc.generatetoaddress(98, l1.rpc.newaddr()['bech32'])
+    bitnetd.rpc.generatetoaddress(98, l1.rpc.newaddr()['bech32'])
     assert len([out for out in l1.rpc.listfunds()['outputs'] if out['status'] == 'confirmed']) == 0
     with pytest.raises(RpcError, match='Could not afford all using all 0 available UTXOs'):
         l1.rpc.withdraw(addr2, "all")
 
     # One more and the first coinbase unlocks
-    bitcoind.rpc.generatetoaddress(1, l1.rpc.newaddr()['bech32'])
+    bitnetd.rpc.generatetoaddress(1, l1.rpc.newaddr()['bech32'])
     wait_for(lambda: len(l1.rpc.listfunds()['outputs']) == 100)
     assert len([out for out in l1.rpc.listfunds()['outputs'] if out['status'] == 'confirmed']) == 1
     l1.rpc.withdraw(addr2, "all")
     # One tx in the mempool now!
-    assert len(bitcoind.rpc.getrawmempool()) == 1
+    assert len(bitnetd.rpc.getrawmempool()) == 1
 
     # Mine one block, assert one more is spendable
-    bitcoind.rpc.generatetoaddress(1, l1.rpc.newaddr()['bech32'])
+    bitnetd.rpc.generatetoaddress(1, l1.rpc.newaddr()['bech32'])
     assert len([out for out in l1.rpc.listfunds()['outputs'] if out['status'] == 'confirmed']) == 1
 
 
 @pytest.mark.openchannel('v2')
-def test_openchannel_no_confirmed_inputs_opener(node_factory, bitcoind):
+def test_openchannel_no_confirmed_inputs_opener(node_factory, bitnetd):
     """ If the opener flags 'require-confirmed-inputs' for an open,
         and accepter sends unconfirmed inputs check that the
         accepter aborts the open """
@@ -2321,7 +2321,7 @@ def test_openchannel_no_confirmed_inputs_opener(node_factory, bitcoind):
 
 
 @pytest.mark.openchannel('v2')
-def test_openchannel_no_unconfirmed_inputs_accepter(node_factory, bitcoind):
+def test_openchannel_no_unconfirmed_inputs_accepter(node_factory, bitnetd):
     """ If the accepter flags 'require-confirmed-inputs' for an open,
         and opener send unconfirmed inputs check that the
         accepter aborts the open """
@@ -2407,7 +2407,7 @@ def test_openchannel_no_unconfirmed_inputs_accepter(node_factory, bitcoind):
 
 @unittest.skip("anchors not available")
 @pytest.mark.openchannel('v2')
-def test_no_anchor_liquidity_ads(node_factory, bitcoind):
+def test_no_anchor_liquidity_ads(node_factory, bitnetd):
     """ Liquidity ads requires anchors, which are no longer a
     requirement for dual-funded channels. """
 
@@ -2444,7 +2444,7 @@ def test_no_anchor_liquidity_ads(node_factory, bitcoind):
 
 @unittest.skipIf(TEST_NETWORK != 'regtest', 'elementsd has different feerates')
 @pytest.mark.parametrize("anchors", [False, True])
-def test_commitment_feerate(bitcoind, node_factory, anchors):
+def test_commitment_feerate(bitnetd, node_factory, anchors):
     opts = {}
     if anchors is False:
         opts['dev-force-features'] = "-23"
@@ -2463,19 +2463,19 @@ def test_commitment_feerate(bitcoind, node_factory, anchors):
     l1.rpc.fundchannel(l2.info['id'], 10**6,
                        feerate=f'{opening_feerate}perkw')
 
-    wait_for(lambda: bitcoind.rpc.getrawmempool() != [])
-    tx = only_one([t for t in bitcoind.rpc.getrawmempool(True).values()])
+    wait_for(lambda: bitnetd.rpc.getrawmempool() != [])
+    tx = only_one([t for t in bitnetd.rpc.getrawmempool(True).values()])
     feerate_perkw = int(tx['fees']['base'] * 100_000_000) / (tx['weight'] / 1000)
     assert opening_feerate - 10 < feerate_perkw < opening_feerate + 10
 
-    bitcoind.generate_block(1)
+    bitnetd.generate_block(1)
 
     l2.stop()
     l1.rpc.close(l2.info['id'], unilateraltimeout=1)
 
     # feerate for this will be the same
-    wait_for(lambda: bitcoind.rpc.getrawmempool() != [])
-    tx = only_one([t for t in bitcoind.rpc.getrawmempool(True).values()])
+    wait_for(lambda: bitnetd.rpc.getrawmempool() != [])
+    tx = only_one([t for t in bitnetd.rpc.getrawmempool(True).values()])
     fee = int(tx['fees']['base'] * 100_000_000)
 
     # Weight is idealized worst case, and we don't meet it!
@@ -2496,12 +2496,12 @@ def test_commitment_feerate(bitcoind, node_factory, anchors):
 
 
 @unittest.skipIf(TEST_NETWORK != 'regtest', 'elementsd has different tx costs')
-def test_anchor_min_emergency(bitcoind, node_factory):
+def test_anchor_min_emergency(bitnetd, node_factory):
     l1, l2 = node_factory.line_graph(2, fundchannel=False)
 
     addr = l1.rpc.newaddr()['bech32']
-    bitcoind.rpc.sendtoaddress(addr, 5000000 / 10**8)
-    bitcoind.generate_block(1, wait_for_mempool=1)
+    bitnetd.rpc.sendtoaddress(addr, 5000000 / 10**8)
+    bitnetd.generate_block(1, wait_for_mempool=1)
     wait_for(lambda: l1.rpc.listfunds()['outputs'] != [])
 
     # Cost of tx itself is 3637.
@@ -2509,7 +2509,7 @@ def test_anchor_min_emergency(bitcoind, node_factory):
         l1.rpc.fundchannel(l2.info['id'], f'{5000000 - 3637}sat')
 
     l1.rpc.fundchannel(l2.info['id'], 'all')
-    bitcoind.generate_block(1, wait_for_mempool=1)
+    bitnetd.generate_block(1, wait_for_mempool=1)
 
     # Wait for l1 to see that spend.
     wait_for(lambda: len(l1.rpc.listfunds()['outputs']) == 1)
@@ -2526,13 +2526,13 @@ def test_anchor_min_emergency(bitcoind, node_factory):
 
     # Even with onchain anchor channel, it still keeps reserve (just in case!).
     l1.rpc.close(l2.info['id'])
-    bitcoind.generate_block(1, wait_for_mempool=1)
-    sync_blockheight(bitcoind, [l1])
+    bitnetd.generate_block(1, wait_for_mempool=1)
+    sync_blockheight(bitnetd, [l1])
 
     # This workse, but will leave the emergency funds as change.
     l1.rpc.withdraw(addr2, 'all')
-    bitcoind.generate_block(1, wait_for_mempool=1)
-    sync_blockheight(bitcoind, [l1])
+    bitnetd.generate_block(1, wait_for_mempool=1)
+    sync_blockheight(bitnetd, [l1])
 
     wait_for(lambda: [(o['amount_msat'], o['status']) for o in l1.rpc.listfunds()['outputs']] == [(Millisatoshi('25000sat'), 'confirmed')])
 
@@ -2541,21 +2541,21 @@ def test_anchor_min_emergency(bitcoind, node_factory):
         l1.rpc.withdraw(addr2, 'all')
 
     # Once it's totally forgotten, we can spend that!
-    bitcoind.generate_block(99)
+    bitnetd.generate_block(99)
     wait_for(lambda: l1.rpc.listpeerchannels()['channels'] == [])
 
     # And it's *all* gone!
     l1.rpc.withdraw(addr2, 'all')
-    bitcoind.generate_block(1, wait_for_mempool=1)
+    bitnetd.generate_block(1, wait_for_mempool=1)
     wait_for(lambda: l1.rpc.listfunds()['outputs'] == [])
 
 
-def test_fundchannel_utxo_too_small(bitcoind, node_factory):
+def test_fundchannel_utxo_too_small(bitnetd, node_factory):
     l1, l2 = node_factory.get_nodes(2)
 
     # Add 1 600 sat UTXO to a fresh node
-    bitcoind.rpc.sendtoaddress(l1.rpc.newaddr()['bech32'], 0.00000600)
-    bitcoind.generate_block(1, wait_for_mempool=1)
+    bitnetd.rpc.sendtoaddress(l1.rpc.newaddr()['bech32'], 0.00000600)
+    bitnetd.generate_block(1, wait_for_mempool=1)
     wait_for(lambda: len(l1.rpc.listfunds()['outputs']) == 1)
 
     # a higher fee rate, making the 600 sat UTXO uneconomical:
@@ -2565,7 +2565,7 @@ def test_fundchannel_utxo_too_small(bitcoind, node_factory):
 
 
 @unittest.skipIf(TEST_NETWORK != 'regtest', 'elementsd doesnt yet support PSBT features we need')
-def test_opening_explicit_channel_type(node_factory, bitcoind):
+def test_opening_explicit_channel_type(node_factory, bitnetd):
     plugin_path = Path(__file__).parent / "plugins" / "zeroconf-selective.py"
     l1, l2, l3, l4 = node_factory.get_nodes(4,
                                             opts=[{'experimental-dual-fund': None},
@@ -2654,7 +2654,7 @@ def test_opening_explicit_channel_type(node_factory, bitcoind):
     # FIXME: Check type is actually correct!
 
     # Mine that so we can spend change.
-    bitcoind.generate_block(1, wait_for_mempool=1)
+    bitnetd.generate_block(1, wait_for_mempool=1)
     wait_for(lambda: len(l1.rpc.listfunds()['outputs']) == 1)
 
     l1.connect(l3)
@@ -2664,7 +2664,7 @@ def test_opening_explicit_channel_type(node_factory, bitcoind):
     assert only_one(l3.rpc.listpeerchannels()['channels'])['channel_type']['bits'] == [STATIC_REMOTEKEY]
 
 
-def test_multifunding_all_amount(node_factory, bitcoind):
+def test_multifunding_all_amount(node_factory, bitnetd):
     l1, l2, l3 = node_factory.get_nodes(3)
 
     l1.fundwallet(2000000)
@@ -2676,7 +2676,7 @@ def test_multifunding_all_amount(node_factory, bitcoind):
 
     l1.rpc.multifundchannel(destinations, minchannels=2)
 
-    bitcoind.generate_block(6, wait_for_mempool=1)
+    bitnetd.generate_block(6, wait_for_mempool=1)
 
     wait_for(lambda: [c['state'] for c in (l1.rpc.listpeerchannels()['channels'])] == ['CHANNELD_NORMAL', 'CHANNELD_NORMAL'])
 

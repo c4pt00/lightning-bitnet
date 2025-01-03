@@ -5,7 +5,7 @@
  * and a few startup sanity checks.
  *
  * The role of this daemon is to start the subdaemons, shuffle peers
- * between them, handle the JSON RPC requests, bitcoind, the database
+ * between them, handle the JSON RPC requests, bitnetd, the database
  * and centralize logging.  In theory, it doesn't trust the other
  * daemons, though we expect `hsmd` (which holds secret keys) to be
  * responsive.
@@ -1354,7 +1354,7 @@ int main(int argc, char *argv[])
 	db_commit_transaction(ld->wallet->db);
 
 	/*~ Initialize block topology.  This does its own io_loop to
-	 * talk to bitcoind, so does its own db transactions. */
+	 * talk to bitnetd, so does its own db transactions. */
 	trace_span_start("setup_topology", ld->topology);
 	setup_topology(ld->topology);
 	trace_span_end(ld->topology);
@@ -1447,7 +1447,7 @@ int main(int argc, char *argv[])
 	}
 
 	/*~ If we have channels closing, make sure we re-xmit the last
-	 * transaction, in case bitcoind lost it. */
+	 * transaction, in case bitnetd lost it. */
 	db_begin_transaction(ld->wallet->db);
 	resend_closing_transactions(ld);
 	db_commit_transaction(ld->wallet->db);
@@ -1458,7 +1458,7 @@ int main(int argc, char *argv[])
 	setup_peers(ld);
 
 	/*~ Now that all the notifications for transactions are in place, we
-	 *  can start the poll loop which queries bitcoind for new blocks. */
+	 *  can start the poll loop which queries bitnetd for new blocks. */
 	begin_topology(ld->topology);
 
 	/*~ To handle --daemon, we fork the daemon early (otherwise we hit

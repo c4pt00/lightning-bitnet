@@ -94,7 +94,7 @@ def test_mpp(node_factory):
     assert details["destination"] == l6.info["id"]
 
 
-def test_errors(node_factory, bitcoind):
+def test_errors(node_factory, bitnetd):
     opts = [
         {"disable-mpp": None, "fee-base": 0, "fee-per-satoshi": 0},
     ]
@@ -119,7 +119,7 @@ def test_errors(node_factory, bitcoind):
 
     scid46, _ = l4.fundchannel(l6, 10**6, wait_for_active=False)
     scid56, _ = l5.fundchannel(l6, 10**6, wait_for_active=False)
-    mine_funding_to_announce(bitcoind, [l1, l2, l3, l4, l5, l6])
+    mine_funding_to_announce(bitnetd, [l1, l2, l3, l4, l5, l6])
 
     l1.daemon.wait_for_logs(
         [
@@ -311,14 +311,14 @@ def start_channels(connections):
         nodes.append(dst)
         src.rpc.connect(dst.info["id"], "localhost", dst.port)
 
-    bitcoind = nodes[0].bitcoin
+    bitnetd = nodes[0].bitcoin
     # If we got here, we want to fund channels
     for src, dst, fundamount in connections:
         addr = src.rpc.newaddr()["bech32"]
-        bitcoind.rpc.sendtoaddress(addr, (fundamount + 1000000) / 10**8)
+        bitnetd.rpc.sendtoaddress(addr, (fundamount + 1000000) / 10**8)
 
-    bitcoind.generate_block(1)
-    sync_blockheight(bitcoind, nodes)
+    bitnetd.generate_block(1)
+    sync_blockheight(bitnetd, nodes)
     txids = []
     for src, dst, fundamount in connections:
         txids.append(
@@ -326,7 +326,7 @@ def start_channels(connections):
         )
 
     # Confirm all channels and wait for them to become usable
-    bitcoind.generate_block(1, wait_for_mempool=txids)
+    bitnetd.generate_block(1, wait_for_mempool=txids)
     scids = []
     for src, dst, fundamount in connections:
         wait_for(lambda: src.channel_state(dst) == "CHANNELD_NORMAL")
@@ -335,9 +335,9 @@ def start_channels(connections):
 
     # Make sure they have all seen block so they don't complain about
     # the coming gossip messages
-    sync_blockheight(bitcoind, nodes)
+    sync_blockheight(bitnetd, nodes)
 
-    bitcoind.generate_block(5)
+    bitnetd.generate_block(5)
 
     # Make sure everyone sees all channels, all other nodes
     for n in nodes:
@@ -509,7 +509,7 @@ def test_htlc_max(node_factory):
     assert invoice["amount_received_msat"] >= Millisatoshi("800000sat")
 
 
-def test_previous_sendpays(node_factory, bitcoind):
+def test_previous_sendpays(node_factory, bitnetd):
     """
     Check that renepay can complete a payment that already started
     """
@@ -731,7 +731,7 @@ def test_concurrency(node_factory):
     assert invoice["amount_received_msat"] >= Millisatoshi("1000sat")
 
 
-def test_privatechan(node_factory, bitcoind):
+def test_privatechan(node_factory, bitnetd):
     """
     Topology:
     1----2----3----4
@@ -753,7 +753,7 @@ def test_privatechan(node_factory, bitcoind):
     c23, _ = l2.fundchannel(l3, 10**6)
     c34, _ = l3.fundchannel(l4, 10**6, announce_channel=False)
 
-    mine_funding_to_announce(bitcoind, [l1, l2, l3, l4])
+    mine_funding_to_announce(bitnetd, [l1, l2, l3, l4])
     l1.wait_channel_active(c12)
     l2.wait_channel_active(c23)
     l3.wait_local_channel_active(c34)
@@ -772,7 +772,7 @@ def test_privatechan(node_factory, bitcoind):
 
 
 @unittest.skipIf(TEST_NETWORK == 'liquid-regtest', "broken for some reason")
-def test_hardmpp2(node_factory, bitcoind):
+def test_hardmpp2(node_factory, bitnetd):
     """Credits to @daywalker90 for this test case."""
     opts = {"disable-mpp": None, "fee-base": 0, "fee-per-satoshi": 10}
     l1, l2, l3 = node_factory.get_nodes(3, opts=opts)

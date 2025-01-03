@@ -70,7 +70,7 @@ impl From<responses::GetinfoResponse> for pb::GetinfoResponse {
             num_pending_channels: c.num_pending_channels, // Rule #2 for type u32
             our_features: c.our_features.map(|v| v.into()),
             version: c.version, // Rule #2 for type string
-            warning_bitcoind_sync: c.warning_bitcoind_sync, // Rule #2 for type string?
+            warning_bitnetd_sync: c.warning_bitnetd_sync, // Rule #2 for type string?
             warning_lightningd_sync: c.warning_lightningd_sync, // Rule #2 for type string?
         }
     }

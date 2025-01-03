@@ -318,7 +318,7 @@ struct wally_psbt *psbt_using_utxos(const tal_t *ctx,
 		}
 
 		/* FIXME: as of 17 sept 2020, elementsd is *at most* at par
-		 * with v0.18.0 of bitcoind, which doesn't support setting
+		 * with v0.18.0 of bitnetd, which doesn't support setting
 		 * non-witness and witness utxo data for an input; remove this
 		 * check once elementsd can be updated */
 		if (!is_elements(chainparams)) {

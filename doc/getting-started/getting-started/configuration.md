@@ -78,33 +78,33 @@ The [`lightning-listconfigs`](ref:lightning-listconfigs) command will output a v
 
   Alias for _network=signet_.
 
-- **bitcoin-cli**=_PATH_ [plugin `bcli`]
+- **bitnet-cli**=_PATH_ [plugin `bcli`]
 
-  The name of _bitcoin-cli_ executable to run.
+  The name of _bitnet-cli_ executable to run.
 
 - **bitcoin-datadir**=_DIR_ [plugin `bcli`]
 
-  _-datadir_ argument to supply to bitcoin-cli(1).
+  _-datadir_ argument to supply to bitnet-cli(1).
 
 - **bitcoin-rpcuser**=_USER_ [plugin `bcli`]
 
-  The RPC username for talking to bitcoind(1).
+  The RPC username for talking to bitnetd(1).
 
 - **bitcoin-rpcpassword**=_PASSWORD_ [plugin `bcli`]
 
-  The RPC password for talking to bitcoind(1).
+  The RPC password for talking to bitnetd(1).
 
 - **bitcoin-rpcconnect**=_HOST_ [plugin `bcli`]
 
-  The bitcoind(1) RPC host to connect to.
+  The bitnetd(1) RPC host to connect to.
 
 - **bitcoin-rpcport**=_PORT_ [plugin `bcli`]
 
-  The bitcoind(1) RPC port to connect to.
+  The bitnetd(1) RPC port to connect to.
 
 - **bitcoin-retry-timeout**=_SECONDS_ [plugin `bcli`]
 
-  Number of seconds to keep trying a bitcoin-cli(1) command. If the  
+  Number of seconds to keep trying a bitnet-cli(1) command. If the  
   command keeps failing after this time, exit with a fatal error.
 
 - **rescan**=_BLOCKS_
@@ -273,7 +273,7 @@ The [`lightning-listconfigs`](ref:lightning-listconfigs) command will output a v
 - **force-feerates**==_VALUES_
 
   Networks like regtest and testnet have unreliable fee estimates: we usually treat them as the minimum (253 sats/kw) if we can't get them.  
-  This allows override of one or more of our standard feerates (see [`lightning-feerates`](ref:lightning-feerates)).  Up to 5 values, separated by '/' can be provided: if fewer are provided, then the final value is used for the remainder.  The values are in per-kw (roughly 1/4 of bitcoind's per-kb values), and the order is "opening", "mutual_close", "unilateral_close", "delayed_to_us", "htlc_resolution", and "penalty".
+  This allows override of one or more of our standard feerates (see [`lightning-feerates`](ref:lightning-feerates)).  Up to 5 values, separated by '/' can be provided: if fewer are provided, then the final value is used for the remainder.  The values are in per-kw (roughly 1/4 of bitnetd's per-kb values), and the order is "opening", "mutual_close", "unilateral_close", "delayed_to_us", "htlc_resolution", and "penalty".
 
   You would usually put this option in the per-chain config file, to avoid setting it on Bitcoin mainnet!  e.g. `~rusty/.lightning/regtest/config`.
 

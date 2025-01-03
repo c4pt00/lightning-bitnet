@@ -11,7 +11,7 @@ from utils import (
 @pytest.mark.openchannel('v1')
 @pytest.mark.openchannel('v2')
 @unittest.skipIf(TEST_NETWORK != 'regtest', 'elementsd doesnt yet support PSBT features we need')
-def test_splice_disconnect_sig(node_factory, bitcoind):
+def test_splice_disconnect_sig(node_factory, bitnetd):
     # Dual open and splicing both use tx_sig messages. If we have dual enabled, ignore the first one.
     disconnect = ['-WIRE_TX_SIGNATURES']
     if EXPERIMENTAL_DUAL_FUND:
@@ -53,7 +53,7 @@ def test_splice_disconnect_sig(node_factory, bitcoind):
     l1.daemon.wait_for_log(r'peer_in WIRE_CHANNEL_REESTABLISH')
     l2.daemon.wait_for_log(r'peer_in WIRE_CHANNEL_REESTABLISH')
 
-    bitcoind.generate_block(6, wait_for_mempool=1)
+    bitnetd.generate_block(6, wait_for_mempool=1)
 
     l1.daemon.wait_for_log(r'CHANNELD_AWAITING_SPLICE to CHANNELD_NORMAL')
     l2.daemon.wait_for_log(r'CHANNELD_AWAITING_SPLICE to CHANNELD_NORMAL')
@@ -69,7 +69,7 @@ def test_splice_disconnect_sig(node_factory, bitcoind):
 @pytest.mark.openchannel('v1')
 @pytest.mark.openchannel('v2')
 @unittest.skipIf(TEST_NETWORK != 'regtest', 'elementsd doesnt yet support PSBT features we need')
-def test_splice_disconnect_commit(node_factory, bitcoind, executor):
+def test_splice_disconnect_commit(node_factory, bitnetd, executor):
     l1 = node_factory.get_node(options={'experimental-splicing': None}, may_reconnect=True)
     l2 = node_factory.get_node(disconnect=['+WIRE_COMMITMENT_SIGNED'],
                                options={'experimental-splicing': None, 'dev-no-reconnect': None},

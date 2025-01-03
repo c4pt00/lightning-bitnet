@@ -777,7 +777,7 @@ static const u8 *send_onion(const tal_t *ctx, struct lightningd *ld,
 	const u8 *onion;
 	unsigned int base_expiry;
 
-	/* Use bitcoind's block height, even if we're behind in processing */
+	/* Use bitnetd's block height, even if we're behind in processing */
 	base_expiry = get_network_blockheight(ld->topology) + 1;
 	onion = serialize_onionpacket(tmpctx, packet);
 	return send_htlc_out(ctx, channel, first_hop->amount,
@@ -1202,7 +1202,7 @@ send_payment(struct lightningd *ld,
 	u8 *onion;
 
 	/* Expiry for HTLCs is absolute.  And add one to give some margin,
-	   and use bitcoind's block height, even if we're behind in processing */
+	   and use bitnetd's block height, even if we're behind in processing */
 	base_expiry = get_network_blockheight(ld->topology) + 1;
 
 	path = sphinx_path_new(tmpctx, rhash->u.u8, sizeof(rhash->u.u8));

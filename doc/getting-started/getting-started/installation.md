@@ -8,7 +8,7 @@ updatedAt: "2023-07-13T05:08:44.966Z"
 ---
 # Binaries
 
-If you're on Ubuntu, you need to install bitcoind:
+If you're on Ubuntu, you need to install bitnetd:
 
 
 ```shell
@@ -64,7 +64,7 @@ For actually doing development and running the tests, you will also need:
 - pip3: to install python-bitcoinlib
 - valgrind: for extra debugging checks
 
-You will also need a version of bitcoind with segregated witness and `estimatesmartfee` with `ECONOMICAL` mode support, such as the 0.16 or above.
+You will also need a version of bitnetd with segregated witness and `estimatesmartfee` with `ECONOMICAL` mode support, such as the 0.16 or above.
 
 ## To Build on Ubuntu
 
@@ -158,7 +158,7 @@ Optionally, add `-j$(nproc)` after `make` to speed up compilation. (e.g. `make -
 Running lightning:
 
 ```shell
-bitcoind &
+bitnetd &
 ./lightningd/lightningd &
 ./cli/lightning-cli help
 ```
@@ -192,7 +192,7 @@ sudo dnf update -y && \
         sudo dnf clean all
 ```
 
-Make sure you have [bitcoind](https://github.com/bitcoin/bitcoin) available to run.
+Make sure you have [bitnetd](https://github.com/bitcoin/bitcoin) available to run.
 
 Clone lightning:
 
@@ -218,14 +218,14 @@ sudo make install
 Running lightning (mainnet):
 
 ```shell
-bitcoind &
+bitnetd &
 lightningd --network=bitcoin
 ```
 
 Running lightning on testnet:
 
 ```shell
-bitcoind -testnet &
+bitnetd -testnet &
 lightningd --network=testnet
 ```
 
@@ -263,13 +263,13 @@ See `/usr/ports/net-p2p/c-lightning/Makefile` for instructions on how to build f
 
 Running lightning:
 
-Configure bitcoind, if not already: add `rpcuser=<foo>` and `rpcpassword=<bar>` to `/usr/local/etc/bitcoin.conf`, maybe also `testnet=1`.
+Configure bitnetd, if not already: add `rpcuser=<foo>` and `rpcpassword=<bar>` to `/usr/local/etc/bitcoin.conf`, maybe also `testnet=1`.
 
 Configure lightningd: copy `/usr/local/etc/lightningd-bitcoin.conf.sample` to  
 `/usr/local/etc/lightningd-bitcoin.conf` and edit according to your needs.
 
 ```shell
-# service bitcoind start
+# service bitnetd start
 # service lightningd start
 # lightning-cli --rpc-file /var/db/c-lightning/bitcoin/lightning-rpc --lightning-dir=/var/db/c-lightning help
 ```
@@ -357,7 +357,7 @@ pip install --upgrade pip
 pip install poetry
 ```
 
-If you don't have bitcoind installed locally you'll need to install that as well:
+If you don't have bitnetd installed locally you'll need to install that as well:
 
 ```shell
 brew install berkeley-db4 boost miniupnpc pkg-config libevent
@@ -365,7 +365,7 @@ git clone https://github.com/bitcoin/bitcoin
 cd bitcoin
 ./autogen.sh
 ./configure
-make src/bitcoind src/bitcoin-cli && make install
+make src/bitnetd src/bitnet-cli && make install
 ```
 
 Clone lightning:
@@ -396,7 +396,7 @@ Running lightning:
 > Edit your `~/Library/Application\ Support/Bitcoin/bitcoin.conf`to include `rpcuser=<foo>` and `rpcpassword=<bar>` first, you may also need to include `testnet=1`.
 
 ```shell
-bitcoind &
+bitnetd &
 ./lightningd/lightningd &
 ./cli/lightning-cli help
 ```
@@ -543,7 +543,7 @@ For all the other Pi devices out there, consider using [Armbian](https://www.arm
 
 You can compile in `customize-image.sh` using the instructions for Ubuntu.
 
-A working example that compiles both bitcoind and Core Lightning for Armbian can  
+A working example that compiles both bitnetd and Core Lightning for Armbian can  
 be found [here](https://github.com/Sjors/armbian-bitcoin-core).
 
 ## To compile for Alpine

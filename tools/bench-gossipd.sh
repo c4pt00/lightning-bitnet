@@ -1,5 +1,5 @@
 #! /bin/sh
-# Needs bitcoind -regtest running.
+# Needs bitnetd -regtest running.
 
 set -e
 
@@ -24,8 +24,8 @@ wait_for_start()
 	    exit 1
 	fi
     done
-    # Wait for it to catch up with bitcoind.
-    while [ "$($LCLI1 -H getinfo | grep '^blockheight=' | cut -d= -f2)" != "$(bitcoin-cli -regtest getblockcount)" ]; do sleep 1; done
+    # Wait for it to catch up with bitnetd.
+    while [ "$($LCLI1 -H getinfo | grep '^blockheight=' | cut -d= -f2)" != "$(bitnet-cli -regtest getblockcount)" ]; do sleep 1; done
     echo "$ID"
 }
 
@@ -72,10 +72,10 @@ else
     TARGETS="$TARGETS "
 fi
 
-if ! bitcoin-cli -regtest ping >/dev/null 2>&1; then
-    bitcoind -regtest > "$DIR"/bitcoind.log &
+if ! bitnet-cli -regtest ping >/dev/null 2>&1; then
+    bitnetd -regtest > "$DIR"/bitnetd.log &
 
-    while ! bitcoin-cli -regtest ping >/dev/null 2>&1; do sleep 1; done
+    while ! bitnet-cli -regtest ping >/dev/null 2>&1; do sleep 1; done
 fi
 
 LIGHTNINGD="./lightningd/lightningd --developer --network=regtest --dev-gossip-time=1550513768"

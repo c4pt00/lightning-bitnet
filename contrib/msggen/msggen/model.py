@@ -428,7 +428,7 @@ class PrimitiveField(Field):
         "number",
         "feerate",
         "utxo",  # A string representing the tuple (txid, outnum)
-        "outputdesc",  # A dict that maps an address to an amount (bitcoind style)
+        "outputdesc",  # A dict that maps an address to an amount (bitnetd style)
         "secret",
         "bip340sig",
         "hash",

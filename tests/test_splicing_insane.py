@@ -27,12 +27,12 @@ def wait_for_confirm(l1, l2):
     l1.daemon.wait_for_log(r'CHANNELD_AWAITING_SPLICE to CHANNELD_NORMAL')
 
 
-def confirm(bitcoind):
-    bitcoind.generate_block(6, wait_for_mempool=1)
+def confirm(bitnetd):
+    bitnetd.generate_block(6, wait_for_mempool=1)
 
 
-def confirm_and_wait(l1, l2, bitcoind):
-    confirm(bitcoind)
+def confirm_and_wait(l1, l2, bitnetd):
+    confirm(bitnetd)
     wait_for_confirm(l1, l2)
 
 
@@ -50,46 +50,46 @@ def wait_for_restart(l1, l2):
 @pytest.mark.openchannel('v1')
 @pytest.mark.openchannel('v2')
 @unittest.skipIf(TEST_NETWORK != 'regtest', 'elementsd doesnt yet support PSBT features we need')
-def test_splice_insane(node_factory, bitcoind):
+def test_splice_insane(node_factory, bitnetd):
     nodes = []
 
     l1, l2 = make_pending_splice(node_factory)
     l2.restart()
     wait_for_restart(l1, l2)
-    confirm_and_wait(l1, l2, bitcoind)
+    confirm_and_wait(l1, l2, bitnetd)
     nodes.append(l1)
     nodes.append(l2)
 
     l1, l2 = make_pending_splice(node_factory)
     l1.restart()
     wait_for_restart(l1, l2)
-    confirm_and_wait(l1, l2, bitcoind)
+    confirm_and_wait(l1, l2, bitnetd)
     nodes.append(l1)
     nodes.append(l2)
 
     l1, l2 = make_pending_splice(node_factory)
     l1.restart()
     wait_for_restart(l1, l2)
-    confirm_and_wait(l1, l2, bitcoind)
+    confirm_and_wait(l1, l2, bitnetd)
     nodes.append(l1)
     nodes.append(l2)
 
     l1, l2 = make_pending_splice(node_factory)
     l2.restart()
     wait_for_restart(l1, l2)
-    confirm_and_wait(l1, l2, bitcoind)
+    confirm_and_wait(l1, l2, bitnetd)
     nodes.append(l1)
     nodes.append(l2)
 
     l1, l2 = make_pending_splice(node_factory)
-    confirm_and_wait(l1, l2, bitcoind)
+    confirm_and_wait(l1, l2, bitnetd)
     l1.restart()
     wait_for_restart(l1, l2)
     nodes.append(l1)
     nodes.append(l2)
 
     l1, l2 = make_pending_splice(node_factory)
-    confirm_and_wait(l1, l2, bitcoind)
+    confirm_and_wait(l1, l2, bitnetd)
     l2.restart()
     wait_for_restart(l1, l2)
     nodes.append(l1)

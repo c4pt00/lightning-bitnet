@@ -2674,7 +2674,7 @@
             "plugin": "/root/lightning/plugins/autoclean",
             "dynamic": true
           },
-          "dev-bitcoind-poll": {
+          "dev-bitnetd-poll": {
             "value_int": 3,
             "source": "cmdline"
           },

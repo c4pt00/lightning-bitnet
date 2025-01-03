@@ -67,24 +67,25 @@ static struct command_result *keysend_cb(struct keysend_data *d, struct payment 
 	size_t hopcount;
 
 	/* On the root payment we perform the featurebit check. */
-	if (p->step == PAYMENT_STEP_FAILED) {
+//	if (p->step == PAYMENT_STEP_FAILED) {
 		/* Now we can look at the error, and the failing node,
 		   and determine whether they didn't like our
 		   attempt. This is required since most nodes don't
 		   explicitly signal support for keysend through the
 		   featurebit method.*/
 
-		if (p->result != NULL &&
+/*		if (p->result != NULL &&
 		    node_id_eq(p->route_destination, p->result->erring_node) &&
-		    p->result->failcode == WIRE_INVALID_ONION_PAYLOAD) {
+//		    p->result->failcode == WIRE_INVALID_ONION_PAYLOAD) {
 			return payment_abort(
 			    p,
 			    PAY_DESTINATION_PERM_FAIL,
 			    "Recipient %s reported an invalid payload, this "
 			    "usually means they don't support keysend.",
 			    fmt_node_id(tmpctx, p->route_destination));
-		}
-	}
+*/
+//		}
+//	}
 
 	if (p->step != PAYMENT_STEP_ONION_PAYLOAD)
 		return payment_continue(p);

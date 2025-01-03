@@ -129,21 +129,21 @@ def only_one(arr):
     return arr[0]
 
 
-def sync_blockheight(bitcoind, nodes):
-    height = bitcoind.rpc.getblockchaininfo()['blocks']
+def sync_blockheight(bitnetd, nodes):
+    height = bitnetd.rpc.getblockchaininfo()['blocks']
     for n in nodes:
         wait_for(lambda: n.rpc.getinfo()['blockheight'] == height)
 
 
-def mine_funding_to_announce(bitcoind, nodes, num_blocks=5, wait_for_mempool=0):
+def mine_funding_to_announce(bitnetd, nodes, num_blocks=5, wait_for_mempool=0):
     """Mine blocks so a channel can be announced (5, if it's already
 mined), but make sure we don't leave nodes behind who will reject the
 announcement.  Not needed if there are only two nodes.
 
     """
-    bitcoind.generate_block(num_blocks - 1, wait_for_mempool)
-    sync_blockheight(bitcoind, nodes)
-    bitcoind.generate_block(1)
+    bitnetd.generate_block(num_blocks - 1, wait_for_mempool)
+    sync_blockheight(bitnetd, nodes)
+    bitnetd.generate_block(1)
 
 
 def wait_channel_quiescent(n1, n2):
@@ -151,9 +151,9 @@ def wait_channel_quiescent(n1, n2):
     wait_for(lambda: only_one(n2.rpc.listpeerchannels(n1.info['id'])['channels'])['htlcs'] == [])
 
 
-def get_tx_p2wsh_outnum(bitcoind, tx, amount):
+def get_tx_p2wsh_outnum(bitnetd, tx, amount):
     """Get output number of this tx which is p2wsh of amount"""
-    decoded = bitcoind.rpc.decoderawtransaction(tx, True)
+    decoded = bitnetd.rpc.decoderawtransaction(tx, True)
 
     for out in decoded['vout']:
         if out['scriptPubKey']['type'] == 'witness_v0_scripthash':
@@ -359,7 +359,7 @@ class SimpleBitcoinProxy:
     """Wrapper for BitcoinProxy to reconnect.
 
     Long wait times between calls to the Bitcoin RPC could result in
-    `bitcoind` closing the connection, so here we just create
+    `bitnetd` closing the connection, so here we just create
     throwaway connections. This is easier than to reach into the RPC
     library to close, reopen and reauth upon failure.
     """
@@ -394,7 +394,7 @@ class SimpleBitcoinProxy:
 
 class BitcoinD(TailableProc):
 
-    def __init__(self, bitcoin_dir="/tmp/bitcoind-test", rpcport=None):
+    def __init__(self, bitcoin_dir="/tmp/bitnetd-test", rpcport=None):
         TailableProc.__init__(self, bitcoin_dir, verbose=False)
 
         if rpcport is None:
@@ -405,14 +405,14 @@ class BitcoinD(TailableProc):
 
         self.bitcoin_dir = bitcoin_dir
         self.rpcport = rpcport
-        self.prefix = 'bitcoind'
+        self.prefix = 'bitnetd'
 
         regtestdir = os.path.join(bitcoin_dir, 'regtest')
         if not os.path.exists(regtestdir):
             os.makedirs(regtestdir)
 
         self.cmd_line = [
-            'bitcoind',
+            'bitnetd',
             '-datadir={}'.format(bitcoin_dir),
             '-printtoconsole',
             '-server',
@@ -552,7 +552,7 @@ class BitcoinD(TailableProc):
 
 
 class ElementsD(BitcoinD):
-    def __init__(self, bitcoin_dir="/tmp/bitcoind-test", rpcport=None):
+    def __init__(self, bitcoin_dir="/tmp/bitnetd-test", rpcport=None):
         config = BITCOIND_CONFIG.copy()
         if 'regtest' in config:
             del config['regtest']
@@ -592,7 +592,7 @@ class LightningD(TailableProc):
     def __init__(
             self,
             lightning_dir,
-            bitcoindproxy,
+            bitnetdproxy,
             port=9735,
             random_hsm=False,
             node_id=0,
@@ -604,7 +604,7 @@ class LightningD(TailableProc):
         self.port = port
         self.cmd_prefix = []
 
-        self.rpcproxy = bitcoindproxy
+        self.rpcproxy = bitnetdproxy
         self.env['CLN_PLUGIN_LOG'] = "cln_plugin=trace,cln_rpc=trace,cln_grpc=trace,debug"
 
         self.opts = LIGHTNINGD_CONFIG.copy()
@@ -635,7 +635,7 @@ class LightningD(TailableProc):
             with open(os.path.join(lightning_dir, TEST_NETWORK, 'hsm_secret'), 'wb') as f:
                 f.write(seed)
         self.opts['dev-fast-gossip'] = None
-        self.opts['dev-bitcoind-poll'] = 1
+        self.opts['dev-bitnetd-poll'] = 1
         self.prefix = 'lightningd-%d' % (node_id)
         # Log to stdout so we see it in failure cases, and log file for TailableProc.
         self.opts['log-file'] = ['-', os.path.join(lightning_dir, "log")]
@@ -751,7 +751,7 @@ class PrettyPrintingLightningRpc(LightningRpc):
 
 
 class LightningNode(object):
-    def __init__(self, node_id, lightning_dir, bitcoind, executor, valgrind, may_fail=False,
+    def __init__(self, node_id, lightning_dir, bitnetd, executor, valgrind, may_fail=False,
                  may_reconnect=False,
                  broken_log=None,
                  allow_warning=False,
@@ -760,7 +760,7 @@ class LightningNode(object):
                  jsonschemas={},
                  valgrind_plugins=True,
                  **kwargs):
-        self.bitcoin = bitcoind
+        self.bitcoin = bitnetd
         self.executor = executor
         self.may_fail = may_fail
         self.may_reconnect = may_reconnect
@@ -779,7 +779,7 @@ class LightningNode(object):
         self.gossip_store = GossipStore(Path(lightning_dir, TEST_NETWORK, "gossip_store"))
 
         self.daemon = LightningD(
-            lightning_dir, bitcoindproxy=bitcoind.get_proxy(),
+            lightning_dir, bitnetdproxy=bitnetd.get_proxy(),
             port=port, random_hsm=random_hsm, node_id=node_id,
         )
 
@@ -826,7 +826,7 @@ class LightningNode(object):
         if dsn is not None:
             self.daemon.opts['wallet'] = dsn
         if valgrind:
-            trace_skip_pattern = '*python*,*bitcoin-cli*,*elements-cli*,*cln-grpc*'
+            trace_skip_pattern = '*python*,*bitnet-cli*,*elements-cli*,*cln-grpc*'
             if not valgrind_plugins:
                 trace_skip_pattern += ',*plugins*'
             self.daemon.cmd_prefix = [
@@ -1003,9 +1003,9 @@ class LightningNode(object):
     def is_synced_with_bitcoin(self, info=None):
         if info is None:
             info = self.rpc.getinfo()
-        return 'warning_bitcoind_sync' not in info and 'warning_lightningd_sync' not in info
+        return 'warning_bitnetd_sync' not in info and 'warning_lightningd_sync' not in info
 
-    def start(self, wait_for_bitcoind_sync=True, stderr_redir=False):
+    def start(self, wait_for_bitnetd_sync=True, stderr_redir=False):
         # If we have a disconnect string, dump it to a file for daemon.
         if 'dev-disconnect' in self.daemon.opts:
             with open(self.daemon.opts['dev-disconnect'], "w") as f:
@@ -1018,7 +1018,7 @@ class LightningNode(object):
         # This shortcut is sufficient for our simple tests.
         self.port = self.info['binding'][0]['port']
         self.gossip_store.open()  # Reopen the gossip_store now that we should have one
-        if wait_for_bitcoind_sync and not self.is_synced_with_bitcoin(self.info):
+        if wait_for_bitnetd_sync and not self.is_synced_with_bitcoin(self.info):
             wait_for(lambda: self.is_synced_with_bitcoin())
 
     def stop(self, timeout=10):
@@ -1266,7 +1266,7 @@ class LightningNode(object):
     # Note: this feeds through the smoother in update_feerate, so changing
     # it on a running daemon may not give expected result!
     def set_feerates(self, feerates, wait_for_effect=True):
-        # (bitcoind returns bitcoin per kb, so these are * 4)
+        # (bitnetd returns bitcoin per kb, so these are * 4)
 
         def mock_estimatesmartfee(r):
             params = r['params']
@@ -1345,7 +1345,7 @@ class LightningNode(object):
             txid = self.bitcoin.rpc.decoderawtransaction(rawtx, True)['txid']
             ret = ret + ((rawtx, txid, blocks),)
             # If it's delayed, we get 'Deferring broadcast of txid' on next line, otherwise
-            # we get 'Broadcasting txid'.  In the latter, make sure bitcoind has it!
+            # we get 'Broadcasting txid'.  In the latter, make sure bitnetd has it!
             r = self.daemon.wait_for_log('Deferring broadcast of txid|Broadcasting txid')
             if 'Broadcasting txid' in r:
                 self.daemon.wait_for_log(f"plugin-bcli: sendrawtx exit.*{rawtx}")
@@ -1521,7 +1521,7 @@ def flock(directory: Path):
 class NodeFactory(object):
     """A factory to setup and start `lightningd` daemons.
     """
-    def __init__(self, request, testname, bitcoind, executor, directory,
+    def __init__(self, request, testname, bitnetd, executor, directory,
                  db_provider, node_cls, jsonschemas):
         if request.node.get_closest_marker("slow_test") and SLOW_MACHINE:
             self.valgrind = False
@@ -1532,7 +1532,7 @@ class NodeFactory(object):
         self.nodes = []
         self.reserved_ports = []
         self.executor = executor
-        self.bitcoind = bitcoind
+        self.bitnetd = bitnetd
         self.directory = directory
         self.lock = threading.Lock()
         self.db_provider = db_provider
@@ -1554,7 +1554,7 @@ class NodeFactory(object):
             'may_reconnect',
             'random_hsm',
             'feerates',
-            'wait_for_bitcoind_sync',
+            'wait_for_bitnetd_sync',
             'allow_bad_gossip',
             'start',
             'gossip_store_file',
@@ -1603,7 +1603,7 @@ class NodeFactory(object):
 
     def get_node(self, node_id=None, options=None, dbfile=None,
                  bkpr_dbfile=None, feerates=(15000, 11000, 7500, 3750),
-                 start=True, wait_for_bitcoind_sync=True, may_fail=False,
+                 start=True, wait_for_bitnetd_sync=True, may_fail=False,
                  expect_fail=False, cleandir=True, gossip_store_file=None, unused_grpc_port=True, **kwargs):
         node_id = self.get_node_id() if not node_id else node_id
         port = reserve_unused_port()
@@ -1620,7 +1620,7 @@ class NodeFactory(object):
         db = self.db_provider.get_db(os.path.join(lightning_dir, TEST_NETWORK), self.testname, node_id)
         db.provider = self.db_provider
         node = self.node_cls(
-            node_id, lightning_dir, self.bitcoind, self.executor, self.valgrind, db=db,
+            node_id, lightning_dir, self.bitnetd, self.executor, self.valgrind, db=db,
             port=port, grpc_port=grpc_port, options=options, may_fail=may_fail or expect_fail,
             jsonschemas=self.jsonschemas,
             **kwargs
@@ -1650,7 +1650,7 @@ class NodeFactory(object):
 
         if start:
             try:
-                node.start(wait_for_bitcoind_sync)
+                node.start(wait_for_bitnetd_sync)
             except Exception:
                 if expect_fail:
                     return node
@@ -1673,20 +1673,20 @@ class NodeFactory(object):
                 dst.daemon.wait_for_log(r'{}-connectd: Handed peer, entering loop'.format(src.info['id']))
             return
 
-        bitcoind = nodes[0].bitcoin
+        bitnetd = nodes[0].bitcoin
         # If we got here, we want to fund channels
         for src, dst in connections:
             addr = src.rpc.newaddr()['bech32']
-            bitcoind.rpc.sendtoaddress(addr, (fundamount + 1000000) / 10**8)
+            bitnetd.rpc.sendtoaddress(addr, (fundamount + 1000000) / 10**8)
 
-        bitcoind.generate_block(1)
-        sync_blockheight(bitcoind, nodes)
+        bitnetd.generate_block(1)
+        sync_blockheight(bitnetd, nodes)
         txids = []
         for src, dst in connections:
             txids.append(src.rpc.fundchannel(dst.info['id'], fundamount, announce=announce_channels)['txid'])
 
         # Confirm all channels and wait for them to become usable
-        bitcoind.generate_block(1, wait_for_mempool=txids)
+        bitnetd.generate_block(1, wait_for_mempool=txids)
         scids = []
         for src, dst in connections:
             wait_for(lambda: src.channel_state(dst) == 'CHANNELD_NORMAL')
@@ -1701,7 +1701,7 @@ class NodeFactory(object):
         if not wait_for_announce:
             return
 
-        bitcoind.generate_block(5)
+        bitnetd.generate_block(5)
 
         # Make sure everyone sees all channels, all other nodes
         for n in nodes:

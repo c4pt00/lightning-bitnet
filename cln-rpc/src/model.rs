@@ -4757,7 +4757,7 @@ pub mod responses {
 	    #[serde(skip_serializing_if = "Option::is_none")]
 	    pub our_features: Option<GetinfoOur_features>,
 	    #[serde(skip_serializing_if = "Option::is_none")]
-	    pub warning_bitcoind_sync: Option<String>,
+	    pub warning_bitnetd_sync: Option<String>,
 	    #[serde(skip_serializing_if = "Option::is_none")]
 	    pub warning_lightningd_sync: Option<String>,
 	    #[serde(skip_serializing_if = "crate::is_none_or_empty")]

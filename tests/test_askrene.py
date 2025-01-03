@@ -757,7 +757,7 @@ def test_fees_dont_exceed_constraints(node_factory):
     assert amount <= max_msat
 
 
-def test_sourcefree_on_mods(node_factory, bitcoind):
+def test_sourcefree_on_mods(node_factory, bitnetd):
     """auto.sourcefree should also apply to layer-created channels"""
     gsfile, nodemap = generate_gossip_store([GenChannel(0, 1, forward=GenChannel.Half(propfee=10000)),
                                              GenChannel(0, 2, forward=GenChannel.Half(propfee=10000))])
@@ -801,7 +801,7 @@ def test_sourcefree_on_mods(node_factory, bitcoind):
                                        'amount_msat': 1003000, 'delay': 117}]])
 
 
-def test_live_spendable(node_factory, bitcoind):
+def test_live_spendable(node_factory, bitnetd):
     """Test we don't exceed spendable limits on a real network on nodes"""
     l1, l2, l3 = node_factory.get_nodes(3)
     l1.fundwallet(10_000_000)
@@ -814,10 +814,10 @@ def test_live_spendable(node_factory, bitcoind):
         l1.rpc.fundchannel(l2.info["id"], capacity, mindepth=1)
         l2.rpc.fundchannel(l3.info["id"], capacity, mindepth=1)
 
-        bitcoind.generate_block(1, wait_for_mempool=2)
-        sync_blockheight(bitcoind, [l1, l2])
+        bitnetd.generate_block(1, wait_for_mempool=2)
+        sync_blockheight(bitnetd, [l1, l2])
 
-    bitcoind.generate_block(5)
+    bitnetd.generate_block(5)
     wait_for(lambda: len(l1.rpc.listchannels()["channels"]) == 2 * 2 * len(capacities))
 
     routes = l1.rpc.getroutes(
@@ -867,7 +867,7 @@ def test_live_spendable(node_factory, bitcoind):
     assert sum(r['amount_msat'] for r in routes["routes"]) == 800_000_001
 
 
-def test_limits_fake_gossmap(node_factory, bitcoind):
+def test_limits_fake_gossmap(node_factory, bitnetd):
     """Like test_live_spendable, but using a generated gossmap not real nodes"""
     gsfile, nodemap = generate_gossip_store([GenChannel(0, 1, capacity_sats=100_000),
                                              GenChannel(0, 1, capacity_sats=100_000),
@@ -938,7 +938,7 @@ def test_limits_fake_gossmap(node_factory, bitcoind):
     assert sum(r['amount_msat'] for r in routes["routes"]) == 800_000_001
 
 
-def test_max_htlc(node_factory, bitcoind):
+def test_max_htlc(node_factory, bitnetd):
     """A route which looks good isn't actually, because of max htlc limits"""
     gsfile, nodemap = generate_gossip_store([GenChannel(0, 1, capacity_sats=500_000,
                                                         forward=GenChannel.Half(htlc_max=1_000_000)),
@@ -972,7 +972,7 @@ def test_max_htlc(node_factory, bitcoind):
                          final_cltv=10)
 
 
-def test_min_htlc(node_factory, bitcoind):
+def test_min_htlc(node_factory, bitnetd):
     """A route which looks good isn't actually, because of min htlc limits"""
     gsfile, nodemap = generate_gossip_store([GenChannel(0, 1, capacity_sats=500_000,
                                                         forward=GenChannel.Half(htlc_min=2_000)),
@@ -988,7 +988,7 @@ def test_min_htlc(node_factory, bitcoind):
                          final_cltv=10)
 
 
-def test_min_htlc_after_excess(node_factory, bitcoind):
+def test_min_htlc_after_excess(node_factory, bitnetd):
     gsfile, nodemap = generate_gossip_store([GenChannel(0, 1, capacity_sats=500_000,
                                                         forward=GenChannel.Half(htlc_min=2_000))])
     l1 = node_factory.get_node(gossip_store_file=gsfile.name)
@@ -1003,7 +1003,7 @@ def test_min_htlc_after_excess(node_factory, bitcoind):
 
 
 @pytest.mark.slow_test
-def test_real_data(node_factory, bitcoind):
+def test_real_data(node_factory, bitnetd):
     # Route from Rusty's node to the top nodes
     # From tests/data/gossip-store-2024-09-22-node-map.xz:
     # Me: 3301:024b9a1fa8e006f1e3937f65f66c408e6da8e1ca728ea43222a7381df1cc449605:BLUEIRON
@@ -1120,7 +1120,7 @@ def test_real_data(node_factory, bitcoind):
 
 
 @pytest.mark.slow_test
-def test_real_biases(node_factory, bitcoind):
+def test_real_biases(node_factory, bitnetd):
     # Route from Rusty's node to the top 100.
     # From tests/data/gossip-store-2024-09-22-node-map.xz:
     # Me: 3301:024b9a1fa8e006f1e3937f65f66c408e6da8e1ca728ea43222a7381df1cc449605:BLUEIRON
@@ -1243,7 +1243,7 @@ def test_real_biases(node_factory, bitcoind):
 
 
 @pytest.mark.slow_test
-def test_askrene_fake_channeld(node_factory, bitcoind):
+def test_askrene_fake_channeld(node_factory, bitnetd):
     outfile = tempfile.NamedTemporaryFile(prefix='gossip-store-')
     nodeids = subprocess.check_output(['devtools/gossmap-compress',
                                        'decompress',

@@ -12,7 +12,7 @@
 #define BITCOIN_TX_DEFAULT_SEQUENCE 0xFFFFFFFF
 
 /* BIP 125: Any nsequence < 0xFFFFFFFE is replacable.
- * And bitcoind uses this value. */
+ * And bitnetd uses this value. */
 #define BITCOIN_TX_RBF_SEQUENCE 0xFFFFFFFD
 
 struct wally_psbt;
@@ -91,11 +91,11 @@ static inline void reverse_bytes(u8 *arr, size_t len)
 	}
 }
 
-/* Parse hex string to get txid (reversed, a-la bitcoind). */
+/* Parse hex string to get txid (reversed, a-la bitnetd). */
 bool bitcoin_txid_from_hex(const char *hexstr, size_t hexstr_len,
 			   struct bitcoin_txid *txid);
 
-/* Get hex string of txid (reversed, a-la bitcoind). */
+/* Get hex string of txid (reversed, a-la bitnetd). */
 bool bitcoin_txid_to_hex(const struct bitcoin_txid *txid,
 			 char *hexstr, size_t hexstr_len);
 

@@ -604,13 +604,13 @@ after_signpsbt(struct command *cmd,
 	Why mark it now *before* doing `sendpsbt` rather than after?
 	Because `sendpsbt` will do approximately this:
 
-	1.  `sendpsbt` launches `bitcoin-cli`.
-	2.  `bitcoin-cli` connects to a `bitcoind` over JSON-RPC
+	1.  `sendpsbt` launches `bitnet-cli`.
+	2.  `bitnet-cli` connects to a `bitnetd` over JSON-RPC
 	    over HTTP.
-	3.  `bitcoind` validates the transactions and puts it int
+	3.  `bitnetd` validates the transactions and puts it int
 	    its local mempool.
-	4.  `bitcoind` tells `bitcoin-cli` it all went well.
-	5.  `bitcoin-cli` tells `sendpsbt` it all went well.
+	4.  `bitnetd` tells `bitnet-cli` it all went well.
+	5.  `bitnet-cli` tells `sendpsbt` it all went well.
 
 	If some interruption or problem occurs between steps 3
 	and 4, then the transaction is already in some node

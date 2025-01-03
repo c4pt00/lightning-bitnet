@@ -673,7 +673,7 @@ def test_invoice_payment_hook_hold(node_factory):
 
 @pytest.mark.openchannel('v1')
 @pytest.mark.openchannel('v2')
-def test_openchannel_hook(node_factory, bitcoind):
+def test_openchannel_hook(node_factory, bitnetd):
     """ l2 uses the reject_odd_funding_amounts plugin to reject some openings.
     """
     opts = [{}, {'plugin': os.path.join(os.getcwd(), 'tests/plugins/reject_odd_funding_amounts.py')}]
@@ -725,7 +725,7 @@ def test_openchannel_hook(node_factory, bitcoind):
 
     # Close it.
     txid = only_one(l1.rpc.close(l2.info['id'])['txids'])
-    bitcoind.generate_block(1, txid)
+    bitnetd.generate_block(1, txid)
     wait_for(lambda: [c['state'] for c in l1.rpc.listpeerchannels(l2.info['id'])['channels']] == ['ONCHAIN'])
 
     # Odd amount: fails
@@ -736,7 +736,7 @@ def test_openchannel_hook(node_factory, bitcoind):
 
 @pytest.mark.openchannel('v1')
 @pytest.mark.openchannel('v2')
-def test_openchannel_hook_error_handling(node_factory, bitcoind):
+def test_openchannel_hook_error_handling(node_factory, bitnetd):
     """ l2 uses a plugin that should fatal() crash the node.
 
     This is because the plugin rejects a channel while
@@ -760,7 +760,7 @@ def test_openchannel_hook_error_handling(node_factory, bitcoind):
 
 @pytest.mark.openchannel('v1')
 @pytest.mark.openchannel('v2')
-def test_openchannel_hook_chaining(node_factory, bitcoind):
+def test_openchannel_hook_chaining(node_factory, bitnetd):
     """ l2 uses a set of plugin that all use the openchannel_hook.
 
     We test that chaining works by using multiple plugins in a way
@@ -798,7 +798,7 @@ def test_openchannel_hook_chaining(node_factory, bitcoind):
 
 @pytest.mark.openchannel('v1')
 @pytest.mark.openchannel('v2')
-def test_channel_state_changed_bilateral(node_factory, bitcoind):
+def test_channel_state_changed_bilateral(node_factory, bitnetd):
     """ We open and close a channel and check notifications both sides.
 
     The misc_notifications.py plugin logs `channel_state_changed` events.
@@ -937,7 +937,7 @@ def test_channel_state_changed_bilateral(node_factory, bitcoind):
     assert(event2['cause'] == "remote")
     assert(event2['message'] == "Closing complete")
 
-    bitcoind.generate_block(100, wait_for_mempool=1)  # so it gets settled
+    bitnetd.generate_block(100, wait_for_mempool=1)  # so it gets settled
 
     event1 = wait_for_event(l1)
     assert(event1['old_state'] == "CLOSINGD_COMPLETE")
@@ -964,7 +964,7 @@ def test_channel_state_changed_bilateral(node_factory, bitcoind):
 
 @pytest.mark.openchannel('v1')
 @pytest.mark.openchannel('v2')
-def test_channel_state_changed_unilateral(node_factory, bitcoind):
+def test_channel_state_changed_unilateral(node_factory, bitnetd):
     """ We open, disconnect, force-close a channel and check for notifications.
 
     The misc_notifications.py plugin logs `channel_state_changed` events.
@@ -1056,7 +1056,7 @@ def test_channel_state_changed_unilateral(node_factory, bitcoind):
     assert(event1['message'] == "channeld: received ERROR channel {}: Forcibly closed by `close` command timeout".format(cid))
 
     # settle the channel closure
-    bitcoind.generate_block(100)
+    bitnetd.generate_block(100)
 
     event2 = wait_for_event(l2)
     assert(event2['old_state'] == "AWAITING_UNILATERAL")
@@ -1087,7 +1087,7 @@ def test_channel_state_changed_unilateral(node_factory, bitcoind):
 
 @pytest.mark.openchannel('v1')
 @pytest.mark.openchannel('v2')
-def test_channel_state_change_history(node_factory, bitcoind):
+def test_channel_state_change_history(node_factory, bitnetd):
     """ We open and close a channel and check for state_canges entries.
 
     """
@@ -1335,7 +1335,7 @@ def test_channel_opened_notification(node_factory):
                            .format(l1.info["id"], amount))
 
 
-def test_forward_event_notification(node_factory, bitcoind, executor):
+def test_forward_event_notification(node_factory, bitnetd, executor):
     """ test 'forward_event' notifications
     """
     amount = 10**8
@@ -1359,9 +1359,9 @@ def test_forward_event_notification(node_factory, bitcoind, executor):
 
     # Generate 5, then make sure everyone is up to date before
     # last one, otherwise they might think it's in the future!
-    bitcoind.generate_block(5)
-    sync_blockheight(bitcoind, [l1, l2, l3, l4, l5])
-    bitcoind.generate_block(1)
+    bitnetd.generate_block(5)
+    sync_blockheight(bitnetd, [l1, l2, l3, l4, l5])
+    bitnetd.generate_block(1)
 
     wait_for(lambda: len(l1.rpc.listchannels()['channels']) == 8)
 
@@ -1406,15 +1406,15 @@ def test_forward_event_notification(node_factory, bitcoind, executor):
     _, txid, blocks = l2.wait_for_onchaind_tx('OUR_HTLC_TIMEOUT_TO_US',
                                               'THEIR_UNILATERAL/OUR_HTLC')
     assert blocks == 5
-    bitcoind.generate_block(5)
+    bitnetd.generate_block(5)
 
     # Could be RBF!
     l2.mine_txid_or_rbf(txid)
     l2.daemon.wait_for_log('Resolved THEIR_UNILATERAL/OUR_HTLC by our proposal OUR_HTLC_TIMEOUT_TO_US')
     l5.daemon.wait_for_log('Ignoring output.*: OUR_UNILATERAL/THEIR_HTLC')
 
-    bitcoind.generate_block(100)
-    sync_blockheight(bitcoind, [l2])
+    bitnetd.generate_block(100)
+    sync_blockheight(bitnetd, [l2])
 
     stats = l2.rpc.listforwards()['forwards']
     assert len(stats) == 3
@@ -1465,7 +1465,7 @@ def test_forward_event_notification(node_factory, bitcoind, executor):
     assert plugin_stats[5] == expect
 
 
-def test_sendpay_notifications(node_factory, bitcoind):
+def test_sendpay_notifications(node_factory, bitnetd):
     """ test 'sendpay_success' and 'sendpay_failure' notifications
     """
     amount = 10**8
@@ -1809,7 +1809,7 @@ def test_hook_chaining(node_factory):
     ))
 
 
-def test_bitcoin_backend(node_factory, bitcoind):
+def test_bitcoin_backend(node_factory, bitnetd):
     """
     This tests interaction with the Bitcoin backend, but not specifically bcli
     """
@@ -1838,13 +1838,13 @@ def test_bitcoin_backend(node_factory, bitcoind):
     del l1.daemon.opts["plugin-dir"]
     del l1.daemon.opts["disable-plugin"]
     l1.start()
-    assert l1.daemon.is_in_log("bitcoin-cli initialized and connected to"
-                               " bitcoind")
+    assert l1.daemon.is_in_log("bitnet-cli initialized and connected to"
+                               " bitnetd")
 
 
-def test_bitcoin_bad_estimatefee(node_factory, bitcoind):
+def test_bitcoin_bad_estimatefee(node_factory, bitnetd):
     """
-    This tests that we don't crash if bitcoind backend gives bad estimatefees.
+    This tests that we don't crash if bitnetd backend gives bad estimatefees.
     """
     plugin = os.path.join(os.getcwd(), "tests/plugins/badestimate.py")
     l1 = node_factory.get_node(options={"disable-plugin": "bcli",
@@ -1862,16 +1862,16 @@ def test_bitcoin_bad_estimatefee(node_factory, bitcoind):
     l2 = node_factory.get_node(options={"disable-plugin": "bcli",
                                         "plugin": plugin})
     # Give me some funds.
-    bitcoind.generate_block(5)
+    bitnetd.generate_block(5)
     l1.fundwallet(100 * 10**8)
     l1.connect(l2)
     l1.rpc.fundchannel(l2.info["id"], 50 * 10**8)
 
 
-def test_bcli(node_factory, bitcoind, chainparams):
+def test_bcli(node_factory, bitnetd, chainparams):
     """
     This tests the bcli plugin, used to gather Bitcoin data from a local
-    bitcoind.
+    bitnetd.
     Mostly sanity checks of the interface..
     """
     l1, l2 = node_factory.get_nodes(2)
@@ -1895,7 +1895,7 @@ def test_bcli(node_factory, bitcoind, chainparams):
     assert resp["blockhash"] is resp["block"] is None
     resp = l1.rpc.call("getrawblockbyheight", {"height": 50})
     assert resp["blockhash"] is not None and resp["blockhash"] is not None
-    # Some other bitcoind-failure cases for this call are covered in
+    # Some other bitnetd-failure cases for this call are covered in
     # tests/test_misc.py
 
     l1.fundwallet(10**5)
@@ -1916,7 +1916,7 @@ def test_bcli(node_factory, bitcoind, chainparams):
 
 
 @unittest.skipIf(TEST_NETWORK != 'regtest', 'p2tr addresses not supported by elementsd')
-def test_hook_crash(node_factory, executor, bitcoind):
+def test_hook_crash(node_factory, executor, bitnetd):
     """Verify that we fail over if a plugin crashes while handling a hook.
 
     We create a star topology, with l1 opening channels to the other nodes,
@@ -1942,9 +1942,9 @@ def test_hook_crash(node_factory, executor, bitcoind):
     # For simplicity, give us N UTXOs to spend.
     addr = l1.rpc.newaddr('p2tr')['p2tr']
     for n in nodes:
-        bitcoind.rpc.sendtoaddress(addr, (FUNDAMOUNT + 30000) / 10**8)
-    bitcoind.generate_block(1, wait_for_mempool=len(nodes))
-    sync_blockheight(bitcoind, [l1])
+        bitnetd.rpc.sendtoaddress(addr, (FUNDAMOUNT + 30000) / 10**8)
+    bitnetd.generate_block(1, wait_for_mempool=len(nodes))
+    sync_blockheight(bitnetd, [l1])
 
     # Start them in any order and we should still always end up with each
     # plugin being called and ultimately the `pay` call should succeed:
@@ -1955,7 +1955,7 @@ def test_hook_crash(node_factory, executor, bitcoind):
         l1.rpc.fundchannel(n.info['id'], FUNDAMOUNT)
 
     # Mine txs first.
-    mine_funding_to_announce(bitcoind, [l1] + nodes, num_blocks=6, wait_for_mempool=len(nodes))
+    mine_funding_to_announce(bitnetd, [l1] + nodes, num_blocks=6, wait_for_mempool=len(nodes))
 
     wait_for(lambda: len(l1.rpc.listchannels()['channels']) == 2 * len(nodes))
 
@@ -2020,7 +2020,7 @@ def test_replacement_payload(node_factory):
     assert l2.daemon.wait_for_log("Attempt to pay.*with wrong payment_secret")
 
 
-def test_watchtower(node_factory, bitcoind, directory, chainparams):
+def test_watchtower(node_factory, bitnetd, directory, chainparams):
     """Test watchtower hook.
 
     l1 and l2 open a channel, make a couple of updates and then l1 cheats on
@@ -2050,9 +2050,9 @@ def test_watchtower(node_factory, bitcoind, directory, chainparams):
     l2.stop()
 
     # Now l1 cheats
-    bitcoind.rpc.sendrawtransaction(tx)
+    bitnetd.rpc.sendrawtransaction(tx)
     time.sleep(1)
-    bitcoind.generate_block(1)
+    bitnetd.generate_block(1)
 
     wt_file = os.path.join(
         l2.daemon.lightning_dir,
@@ -2060,7 +2060,7 @@ def test_watchtower(node_factory, bitcoind, directory, chainparams):
         'watchtower.csv'
     )
 
-    cheat_tx = bitcoind.rpc.decoderawtransaction(tx)
+    cheat_tx = bitnetd.rpc.decoderawtransaction(tx)
     lastcommitnum = 0
     for l in open(wt_file, 'r'):
         txid, penalty, channel_id_hook, commitnum = l.strip().split(', ')
@@ -2069,14 +2069,14 @@ def test_watchtower(node_factory, bitcoind, directory, chainparams):
         lastcommitnum += 1
         if txid == cheat_tx['txid']:
             # This one should succeed, since it is a response to the cheat_tx
-            bitcoind.rpc.sendrawtransaction(penalty)
+            bitnetd.rpc.sendrawtransaction(penalty)
             break
 
     # Need this to check that l2 gets the funds
-    penalty_meta = bitcoind.rpc.decoderawtransaction(penalty)
+    penalty_meta = bitnetd.rpc.decoderawtransaction(penalty)
 
     time.sleep(1)
-    bitcoind.generate_block(1)
+    bitnetd.generate_block(1)
 
     # Make sure l2's normal penalty_tx doesn't reach the network
     def mock_sendrawtransaction(tx):
@@ -2116,7 +2116,7 @@ def test_plugin_fail(node_factory):
 
 @pytest.mark.openchannel('v1')
 @pytest.mark.openchannel('v2')
-def test_coin_movement_notices(node_factory, bitcoind, chainparams):
+def test_coin_movement_notices(node_factory, bitnetd, chainparams):
     """Verify that channel coin movements are triggered correctly.  """
 
     l1_l2_mvts = [
@@ -2149,7 +2149,7 @@ def test_coin_movement_notices(node_factory, bitcoind, chainparams):
         {'may_reconnect': True, 'plugin': coin_plugin},
     ], wait_for_announce=True)
 
-    mine_funding_to_announce(bitcoind, [l1, l2, l3])
+    mine_funding_to_announce(bitnetd, [l1, l2, l3])
     wait_for(lambda: len(l1.rpc.listchannels()['channels']) == 4)
     amount = 10**8
 
@@ -2207,8 +2207,8 @@ def test_coin_movement_notices(node_factory, bitcoind, chainparams):
         'sendrawtx exit 0',
     ])
     assert account_balance(l2, chanid_1) == 100001001
-    bitcoind.generate_block(6)
-    sync_blockheight(bitcoind, [l2])
+    bitnetd.generate_block(6)
+    sync_blockheight(bitnetd, [l2])
     l2.daemon.wait_for_log('{}.*FUNDING_TRANSACTION/FUNDING_OUTPUT->MUTUAL_CLOSE depth'.format(l1.info['id']))
 
     l2.rpc.close(chan3)
@@ -2217,8 +2217,8 @@ def test_coin_movement_notices(node_factory, bitcoind, chainparams):
         'sendrawtx exit 0',
     ])
     assert account_balance(l2, chanid_3) == 950000501
-    bitcoind.generate_block(6)
-    sync_blockheight(bitcoind, [l2])
+    bitnetd.generate_block(6)
+    sync_blockheight(bitnetd, [l2])
     l2.daemon.wait_for_log('{}.*FUNDING_TRANSACTION/FUNDING_OUTPUT->MUTUAL_CLOSE depth'.format(l3.info['id']))
     l3.daemon.wait_for_log('Resolved FUNDING_TRANSACTION/FUNDING_OUTPUT by MUTUAL_CLOSE')
 
@@ -3432,9 +3432,9 @@ def test_autoclean_once(node_factory):
                                                                         'cleaned': 1}}}
 
 
-def test_block_added_notifications(node_factory, bitcoind):
+def test_block_added_notifications(node_factory, bitnetd):
     """Test if a plugin gets notifications when a new block is found"""
-    base = bitcoind.rpc.getblockchaininfo()["blocks"]
+    base = bitnetd.rpc.getblockchaininfo()["blocks"]
     plugin = [
         os.path.join(os.getcwd(), "tests/plugins/block_added.py"),
     ]
@@ -3442,8 +3442,8 @@ def test_block_added_notifications(node_factory, bitcoind):
     ret = l1.rpc.call("blockscatched")
     assert len(ret) == 1 and ret[0] == base + 0
 
-    bitcoind.generate_block(2)
-    sync_blockheight(bitcoind, [l1])
+    bitnetd.generate_block(2)
+    sync_blockheight(bitnetd, [l1])
     ret = l1.rpc.call("blockscatched")
     assert len(ret) == 3 and ret[0] == base + 0 and ret[2] == base + 2
 
@@ -3452,21 +3452,21 @@ def test_block_added_notifications(node_factory, bitcoind):
     assert len(ret) == 1 and ret[0] == base + 2
 
     l2.stop()
-    next_l2_base = bitcoind.rpc.getblockchaininfo()["blocks"]
+    next_l2_base = bitnetd.rpc.getblockchaininfo()["blocks"]
 
-    bitcoind.generate_block(2)
-    sync_blockheight(bitcoind, [l1])
+    bitnetd.generate_block(2)
+    sync_blockheight(bitnetd, [l1])
     ret = l1.rpc.call("blockscatched")
     assert len(ret) == 5 and ret[4] == base + 4
 
     l2.start()
-    sync_blockheight(bitcoind, [l2])
+    sync_blockheight(bitnetd, [l2])
     ret = l2.rpc.call("blockscatched")
     assert len(ret) == 3 and ret[1] == next_l2_base + 1 and ret[2] == next_l2_base + 2
 
 
 @unittest.skipIf(TEST_NETWORK != 'regtest', 'elementsd doesnt yet support PSBT features we need')
-def test_sql(node_factory, bitcoind):
+def test_sql(node_factory, bitnetd):
     opts = {'experimental-dual-fund': None,
             'dev-allow-localhost': None,
             'may_reconnect': True}
@@ -4126,10 +4126,10 @@ def test_sql(node_factory, bitcoind):
 
     # We need one closed channel (but open a new one)
     l2.rpc.close(l1.info['id'])
-    bitcoind.generate_block(1, wait_for_mempool=1)
+    bitnetd.generate_block(1, wait_for_mempool=1)
     scid, _ = l1.fundchannel(l2)
     # Completely forget old channel
-    bitcoind.generate_block(99)
+    bitnetd.generate_block(99)
     wait_for(lambda: len(l2.rpc.listpeerchannels()['channels']) == 2)
 
     # Make sure l3 sees new channel
@@ -4198,7 +4198,7 @@ def test_sql(node_factory, bitcoind):
 
     # This has to wait for the hold_invoice plugin to let go!
     txid = only_one(l1.rpc.close(l2.info['id'])['txids'])
-    bitcoind.generate_block(13, wait_for_mempool=txid)
+    bitnetd.generate_block(13, wait_for_mempool=txid)
     wait_for(lambda: len(l3.rpc.listchannels(source=l1.info['id'])['channels']) == 0)
     assert len(l3.rpc.sql("SELECT * FROM channels WHERE source = X'{}';".format(l1.info['id']))['rows']) == 0
     l3.daemon.wait_for_log("Deleting channel: {}".format(scid))
@@ -4247,7 +4247,7 @@ def test_sql(node_factory, bitcoind):
     wait_for(lambda: l3.rpc.sql("SELECT * FROM nodes WHERE alias = '{}'".format(alias))['rows'] != [])
 
 
-def test_sql_deprecated(node_factory, bitcoind):
+def test_sql_deprecated(node_factory, bitnetd):
     # deprecated-apis breaks schemas...
     l1 = node_factory.get_node(start=False, options={'allow-deprecated-apis': True})
     l1.rpc.check_request_schemas = False
@@ -4423,7 +4423,7 @@ def test_autoclean_batch(node_factory):
              == {'autoclean': {'expiredinvoices': {'enabled': True, 'cleaned': 200, 'age': 2}}})
 
 
-def test_sql_crash(node_factory, bitcoind):
+def test_sql_crash(node_factory, bitnetd):
     """sub-object with inner-sub-object is missing -> Crash.  This only
     happens for local and remote inside listpeerchannels.update (for
     now).
@@ -4432,8 +4432,8 @@ def test_sql_crash(node_factory, bitcoind):
     l1, l2 = node_factory.line_graph(2, fundchannel=False)
 
     addr = l1.rpc.newaddr()['bech32']
-    bitcoind.rpc.sendtoaddress(addr, 1)
-    bitcoind.generate_block(1)
+    bitnetd.rpc.sendtoaddress(addr, 1)
+    bitnetd.generate_block(1)
 
     wait_for(lambda: l1.rpc.listfunds()['outputs'] != [])
 

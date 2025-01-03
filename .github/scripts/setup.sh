@@ -52,7 +52,7 @@ sudo apt-get -qq install --no-install-recommends --allow-unauthenticated -yy \
 echo "tester ALL=(root) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/tester
 sudo chmod 0440 /etc/sudoers.d/tester
 
-"$(dirname "$0")"/install-bitcoind.sh
+"$(dirname "$0")"/install-bitnetd.sh
 
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- \
      -y --default-toolchain ${RUST_VERSION}

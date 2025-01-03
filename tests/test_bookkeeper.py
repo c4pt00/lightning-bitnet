@@ -24,7 +24,7 @@ def find_first_tag(evs, tag):
 
 
 @unittest.skipIf(TEST_NETWORK != 'regtest', "fixme: broadcast fails, dusty")
-def test_bookkeeping_closing_trimmed_htlcs(node_factory, bitcoind, executor):
+def test_bookkeeping_closing_trimmed_htlcs(node_factory, bitnetd, executor):
     l1, l2 = node_factory.line_graph(2)
 
     # Send l2 funds via the channel
@@ -38,16 +38,16 @@ def test_bookkeeping_closing_trimmed_htlcs(node_factory, bitcoind, executor):
     l1.rpc.dev_fail(l2.info['id'])
     l1.wait_for_channel_onchain(l2.info['id'])
 
-    bitcoind.generate_block(1)
+    bitnetd.generate_block(1)
     l1.daemon.wait_for_log(' to ONCHAIN')
     l2.daemon.wait_for_log(' to ONCHAIN')
 
     _, txid, blocks = l1.wait_for_onchaind_tx('OUR_DELAYED_RETURN_TO_WALLET',
                                               'OUR_UNILATERAL/DELAYED_OUTPUT_TO_US')
     assert blocks == 4
-    bitcoind.generate_block(4)
-    bitcoind.generate_block(20, wait_for_mempool=txid)
-    sync_blockheight(bitcoind, [l1])
+    bitnetd.generate_block(4)
+    bitnetd.generate_block(20, wait_for_mempool=txid)
+    sync_blockheight(bitnetd, [l1])
     l1.daemon.wait_for_log(r'All outputs resolved.*')
 
     evs = l1.rpc.bkpr_listaccountevents()['events']
@@ -73,7 +73,7 @@ def test_bookkeeping_closing_trimmed_htlcs(node_factory, bitcoind, executor):
 
 
 @unittest.skipIf(TEST_NETWORK != 'regtest', "fixme: broadcast fails, dusty")
-def test_bookkeeping_closing_subsat_htlcs(node_factory, bitcoind, chainparams):
+def test_bookkeeping_closing_subsat_htlcs(node_factory, bitnetd, chainparams):
     """Test closing balances when HTLCs are: sub 1-satoshi"""
     l1, l2 = node_factory.line_graph(2)
 
@@ -86,17 +86,17 @@ def test_bookkeeping_closing_subsat_htlcs(node_factory, bitcoind, chainparams):
 
     l2.stop()
     l1.rpc.close(l2.info['id'], 1)
-    bitcoind.generate_block(1, wait_for_mempool=1)
+    bitnetd.generate_block(1, wait_for_mempool=1)
 
     _, txid, blocks = l1.wait_for_onchaind_tx('OUR_DELAYED_RETURN_TO_WALLET',
                                               'OUR_UNILATERAL/DELAYED_OUTPUT_TO_US')
     assert blocks == 4
-    bitcoind.generate_block(4)
+    bitnetd.generate_block(4)
 
     l2.start()
-    bitcoind.generate_block(80, wait_for_mempool=txid)
+    bitnetd.generate_block(80, wait_for_mempool=txid)
 
-    sync_blockheight(bitcoind, [l1, l2])
+    sync_blockheight(bitnetd, [l1, l2])
     evs = l1.rpc.bkpr_listaccountevents()['events']
     # check that closing equals onchain deposits + fees
     close = find_first_tag(evs, 'channel_close')
@@ -118,7 +118,7 @@ def test_bookkeeping_closing_subsat_htlcs(node_factory, bitcoind, chainparams):
 
 
 @unittest.skipIf(TEST_NETWORK != 'regtest', "External wallet support doesn't work with elements yet.")
-def test_bookkeeping_external_withdraws(node_factory, bitcoind):
+def test_bookkeeping_external_withdraws(node_factory, bitnetd):
     """ Withdrawals to an external address shouldn't be included
     in the income statements until confirmed"""
     l1 = node_factory.get_node()
@@ -126,10 +126,10 @@ def test_bookkeeping_external_withdraws(node_factory, bitcoind):
 
     amount = 1111111
     amount_msat = Millisatoshi(amount * 1000)
-    bitcoind.rpc.sendtoaddress(addr, amount / 10**8)
-    bitcoind.rpc.sendtoaddress(addr, amount / 10**8)
+    bitnetd.rpc.sendtoaddress(addr, amount / 10**8)
+    bitnetd.rpc.sendtoaddress(addr, amount / 10**8)
 
-    bitcoind.generate_block(1)
+    bitnetd.generate_block(1)
     wait_for(lambda: len(l1.rpc.listfunds()['outputs']) == 2)
 
     waddr = l1.bitcoin.rpc.getnewaddress()
@@ -137,7 +137,7 @@ def test_bookkeeping_external_withdraws(node_factory, bitcoind):
     # Ok, now we send some funds to an external address
     out = l1.rpc.withdraw(waddr, amount // 2)
 
-    # Make sure bitcoind received the withdrawal
+    # Make sure bitnetd received the withdrawal
     unspent = l1.bitcoin.rpc.listunspent(0)
     withdrawal = [u for u in unspent if u['txid'] == out['txid']]
 
@@ -177,8 +177,8 @@ def test_bookkeeping_external_withdraws(node_factory, bitcoind):
     assert btc_balance['balance_msat'] == amount_msat * 2
 
     # ok now we mine a block
-    bitcoind.generate_block(1)
-    sync_blockheight(bitcoind, [l1])
+    bitnetd.generate_block(1)
+    sync_blockheight(bitnetd, [l1])
 
     # expect the withdrawal to appear in the incomes
     # and there should be an onchain fee
@@ -199,7 +199,7 @@ def test_bookkeeping_external_withdraws(node_factory, bitcoind):
 
 @unittest.skipIf(TEST_NETWORK != 'regtest', "External wallet support doesn't work with elements yet.")
 @unittest.skipIf(os.getenv('TEST_DB_PROVIDER', 'sqlite3') != 'sqlite3', "Depends on sqlite3 database location")
-def test_bookkeeping_external_withdraw_missing(node_factory, bitcoind):
+def test_bookkeeping_external_withdraw_missing(node_factory, bitnetd):
     """ Withdrawals to an external address turn up as
     extremely large onchain_fees when they happen before
     our accounting plugin is attached"""
@@ -210,10 +210,10 @@ def test_bookkeeping_external_withdraw_missing(node_factory, bitcoind):
 
     amount = 1111111
     amount_msat = Millisatoshi(amount * 1000)
-    bitcoind.rpc.sendtoaddress(addr, amount / 10**8)
-    bitcoind.rpc.sendtoaddress(addr, amount / 10**8)
+    bitnetd.rpc.sendtoaddress(addr, amount / 10**8)
+    bitnetd.rpc.sendtoaddress(addr, amount / 10**8)
 
-    bitcoind.generate_block(1)
+    bitnetd.generate_block(1)
     wait_for(lambda: len(l1.rpc.listfunds()['outputs']) == 2)
 
     waddr = l1.bitcoin.rpc.getnewaddress()
@@ -244,8 +244,8 @@ def test_bookkeeping_external_withdraw_missing(node_factory, bitcoind):
     assert btc_balance['balance_msat'] == amount_msat * 2
 
     # ok now we mine a block
-    bitcoind.generate_block(1)
-    sync_blockheight(bitcoind, [l1])
+    bitnetd.generate_block(1)
+    sync_blockheight(bitnetd, [l1])
 
     # expect the withdrawal to appear in the incomes
     # and there should be an onchain fee
@@ -265,7 +265,7 @@ def test_bookkeeping_external_withdraw_missing(node_factory, bitcoind):
 
 
 @unittest.skipIf(TEST_NETWORK != 'regtest', "External wallet support doesn't work with elements yet.")
-def test_bookkeeping_rbf_withdraw(node_factory, bitcoind):
+def test_bookkeeping_rbf_withdraw(node_factory, bitnetd):
     """ If a withdraw to an external gets RBF'd,
         it should *not* show up in our income ever.
         (but it will show up in our account events)
@@ -277,11 +277,11 @@ def test_bookkeeping_rbf_withdraw(node_factory, bitcoind):
     event_counter = 0
     income_counter = 0
 
-    bitcoind.rpc.sendtoaddress(addr, amount / 10**8)
+    bitnetd.rpc.sendtoaddress(addr, amount / 10**8)
     event_counter += 1
     income_counter += 1
 
-    bitcoind.generate_block(1)
+    bitnetd.generate_block(1)
 
     wait_for(lambda: len(l1.rpc.listfunds()['outputs']) == 1)
     assert len(l1.rpc.bkpr_listaccountevents()['events']) == event_counter
@@ -292,7 +292,7 @@ def test_bookkeeping_rbf_withdraw(node_factory, bitcoind):
     out1 = l1.rpc.withdraw(waddr, amount // 2, feerate='253perkw')
     event_counter += 1
 
-    mempool = bitcoind.rpc.getrawmempool(True)
+    mempool = bitnetd.rpc.getrawmempool(True)
     assert len(list(mempool.keys())) == 1
     assert out1['txid'] in list(mempool.keys())
 
@@ -305,7 +305,7 @@ def test_bookkeeping_rbf_withdraw(node_factory, bitcoind):
 
     # resend the tx
     out2 = l1.rpc.withdraw(waddr, amount // 2, feerate='1000perkw')
-    mempool = bitcoind.rpc.getrawmempool(True)
+    mempool = bitnetd.rpc.getrawmempool(True)
     event_counter += 1
 
     assert len(list(mempool.keys())) == 1
@@ -316,8 +316,8 @@ def test_bookkeeping_rbf_withdraw(node_factory, bitcoind):
     assert len(l1.rpc.bkpr_listincome()['income_events']) == income_counter
 
     # ok now we mine a block
-    bitcoind.generate_block(1)
-    sync_blockheight(bitcoind, [l1])
+    bitnetd.generate_block(1)
+    sync_blockheight(bitnetd, [l1])
 
     acct_evs = l1.rpc.bkpr_listaccountevents()['events']
     externs = [e for e in acct_evs if e['account'] == 'external']
@@ -346,7 +346,7 @@ def test_bookkeeping_rbf_withdraw(node_factory, bitcoind):
 @pytest.mark.openchannel('v2')
 @unittest.skipIf(os.getenv('TEST_DB_PROVIDER', 'sqlite3') != 'sqlite3', "turns off bookkeeper at start")
 @unittest.skipIf(TEST_NETWORK != 'regtest', "network fees hardcoded")
-def test_bookkeeping_missed_chans_leases(node_factory, bitcoind):
+def test_bookkeeping_missed_chans_leases(node_factory, bitnetd):
     """
     Test that a lease is correctly recorded if bookkeeper was off
     """
@@ -373,7 +373,7 @@ def test_bookkeeping_missed_chans_leases(node_factory, bitcoind):
     txid = l1.rpc.fundchannel(l2.info['id'], open_amt, request_amt=open_amt,
                               feerate='{}perkw'.format(feerate),
                               compact_lease=compact_lease)['txid']
-    bitcoind.generate_block(1, wait_for_mempool=[txid])
+    bitnetd.generate_block(1, wait_for_mempool=[txid])
     wait_for(lambda: l1.channel_state(l2) == 'CHANNELD_NORMAL')
     scid = l1.get_channel_scid(l2)
     l1.wait_local_channel_active(scid)
@@ -419,7 +419,7 @@ def test_bookkeeping_missed_chans_leases(node_factory, bitcoind):
 @unittest.skipIf(os.getenv('TEST_DB_PROVIDER', 'sqlite3') != 'sqlite3', "turns off bookkeeper at start")
 @unittest.skipIf(TEST_NETWORK != 'regtest', "network fees hardcoded")
 @pytest.mark.openchannel('v1', 'Uses push-msat')
-def test_bookkeeping_missed_chans_pushed(node_factory, bitcoind):
+def test_bookkeeping_missed_chans_pushed(node_factory, bitnetd):
     """
     Test for a push_msat value in a missed channel open.
     """
@@ -438,7 +438,7 @@ def test_bookkeeping_missed_chans_pushed(node_factory, bitcoind):
     l1.fundwallet(200000000)
     l1.rpc.connect(l2.info['id'], 'localhost', l2.port)
     txid = l1.rpc.fundchannel(l2.info['id'], open_amt, push_msat=push_amt)['txid']
-    bitcoind.generate_block(1, wait_for_mempool=[txid])
+    bitnetd.generate_block(1, wait_for_mempool=[txid])
     wait_for(lambda: l1.channel_state(l2) == 'CHANNELD_NORMAL')
     scid = l1.get_channel_scid(l2)
     l1.wait_local_channel_active(scid)
@@ -484,7 +484,7 @@ def test_bookkeeping_missed_chans_pushed(node_factory, bitcoind):
 
 @unittest.skipIf(TEST_NETWORK != 'regtest', "network fees hardcoded")
 @pytest.mark.openchannel('v1')
-def test_bookkeeping_inspect_multifundchannel(node_factory, bitcoind):
+def test_bookkeeping_inspect_multifundchannel(node_factory, bitnetd):
     """
     Test that bookkeeper splits multifundchannel fees correctly for single funded channels.
     For single funded channels, l1 pays the entirety of the fee associated with multifundchannel, and the fee is
@@ -514,12 +514,12 @@ def test_bookkeeping_inspect_multifundchannel(node_factory, bitcoind):
     channel_13_channel_id = channel_ids[1]['channel_id']
     channel_14_channel_id = channel_ids[2]['channel_id']
 
-    bitcoind.generate_block(1, wait_for_mempool=[multifundchannel_txid])
+    bitnetd.generate_block(1, wait_for_mempool=[multifundchannel_txid])
     wait_for(lambda: l1.channel_state(l2) == 'CHANNELD_NORMAL')
     wait_for(lambda: l1.channel_state(l3) == 'CHANNELD_NORMAL')
     wait_for(lambda: l1.channel_state(l4) == 'CHANNELD_NORMAL')
 
-    # now use getblock to get the tx fee from bitcoin-cli's perspective
+    # now use getblock to get the tx fee from bitnet-cli's perspective
     multifundchannel_rawtx = l1.bitcoin.rpc.getrawtransaction(multifundchannel_txid, True)
     blockhash = multifundchannel_rawtx['blockhash']
     getblock_tx = l1.bitcoin.rpc.getblock(blockhash, 2)['tx']
@@ -542,7 +542,7 @@ def test_bookkeeping_inspect_multifundchannel(node_factory, bitcoind):
 
 @unittest.skipIf(TEST_NETWORK != 'regtest', "network fees hardcoded")
 @pytest.mark.openchannel('v2')
-def test_bookkeeping_inspect_mfc_dual_funded(node_factory, bitcoind):
+def test_bookkeeping_inspect_mfc_dual_funded(node_factory, bitnetd):
     """
     Test that bookkeeper splits multifundchannel fees correctly for dual funded channels.
     For dual funded channels, the other nodes also pay part of the fees associated with multifundchannel, since they
@@ -579,12 +579,12 @@ def test_bookkeeping_inspect_mfc_dual_funded(node_factory, bitcoind):
     channel_13_channel_id = channel_ids[1]['channel_id']
     channel_14_channel_id = channel_ids[2]['channel_id']
 
-    bitcoind.generate_block(5, wait_for_mempool=[multifundchannel_txid])
+    bitnetd.generate_block(5, wait_for_mempool=[multifundchannel_txid])
     wait_for(lambda: l1.channel_state(l2) == 'CHANNELD_NORMAL')
     wait_for(lambda: l1.channel_state(l3) == 'CHANNELD_NORMAL')
     wait_for(lambda: l1.channel_state(l4) == 'CHANNELD_NORMAL')
 
-    # now use getblock to get the tx fee from bitcoin-cli's perspective
+    # now use getblock to get the tx fee from bitnet-cli's perspective
     multifundchannel_rawtx = l1.bitcoin.rpc.getrawtransaction(multifundchannel_txid, True)
     blockhash = multifundchannel_rawtx['blockhash']
     getblock_tx = l1.bitcoin.rpc.getblock(blockhash, 2)['tx']
@@ -614,7 +614,7 @@ def test_bookkeeping_inspect_mfc_dual_funded(node_factory, bitcoind):
 @unittest.skipIf(os.getenv('TEST_DB_PROVIDER', 'sqlite3') != 'sqlite3', "turns off bookkeeper at start")
 @unittest.skipIf(TEST_NETWORK != 'regtest', "network fees hardcoded")
 @pytest.mark.openchannel('v1', 'Uses push-msat')
-def test_bookkeeping_missed_chans_pay_after(node_factory, bitcoind):
+def test_bookkeeping_missed_chans_pay_after(node_factory, bitnetd):
     """
     Route a payment through a channel that we didn't have open when the bookkeeper
     was around
@@ -634,7 +634,7 @@ def test_bookkeeping_missed_chans_pay_after(node_factory, bitcoind):
     l1.fundwallet(200000000)
     l1.rpc.connect(l2.info['id'], 'localhost', l2.port)
     txid = l1.rpc.fundchannel(l2.info['id'], open_amt)['txid']
-    bitcoind.generate_block(1, wait_for_mempool=[txid])
+    bitnetd.generate_block(1, wait_for_mempool=[txid])
     wait_for(lambda: l1.channel_state(l2) == 'CHANNELD_NORMAL')
     scid = l1.get_channel_scid(l2)
     l1.wait_local_channel_active(scid)
@@ -684,7 +684,7 @@ def test_bookkeeping_missed_chans_pay_after(node_factory, bitcoind):
 
 
 @unittest.skipIf(os.getenv('TEST_DB_PROVIDER', 'sqlite3') != 'sqlite3', "turns off bookkeeper at start")
-def test_bookkeeping_onchaind_txs(node_factory, bitcoind):
+def test_bookkeeping_onchaind_txs(node_factory, bitnetd):
     """
     Test for a channel that's closed, but whose close tx
     re-appears in the rescan
@@ -701,14 +701,14 @@ def test_bookkeeping_onchaind_txs(node_factory, bitcoind):
     # Send l2 funds via the channel
     l1.pay(l2, 11000000)
     l1.daemon.wait_for_log(r'coin movement:.*\'invoice\'')
-    bitcoind.generate_block(10)
+    bitnetd.generate_block(10)
 
     # Amicably close the channel, mine 101 blocks (channel forgotten)
     l1.rpc.close(l2.info['id'])
     l1.wait_for_channel_onchain(l2.info['id'])
 
-    bitcoind.generate_block(101)
-    sync_blockheight(bitcoind, [l1])
+    bitnetd.generate_block(101)
+    sync_blockheight(bitnetd, [l1])
 
     l1.daemon.wait_for_log('onchaind complete, forgetting peer')
 
@@ -738,7 +738,7 @@ def test_bookkeeping_onchaind_txs(node_factory, bitcoind):
     assert outs == only_one(wallet_bal['balances'])['balance_msat']
 
 
-def test_bookkeeping_descriptions(node_factory, bitcoind, chainparams):
+def test_bookkeeping_descriptions(node_factory, bitnetd, chainparams):
     """
     When an 'invoice' type event comes through, we look up the description details
     to include about the item. Particularly useful for CSV outputs etc.
@@ -821,7 +821,7 @@ def test_bookkeeping_descriptions(node_factory, bitcoind, chainparams):
         assert only_one([ev for ev in evs if 'description' in ev and ev['description'] == edited_desc_outpoint])
 
 
-def test_empty_node(node_factory, bitcoind):
+def test_empty_node(node_factory, bitnetd):
     """
     Make sure that the bookkeeper commands don't blow up
     on an empty accounts database.
@@ -842,7 +842,7 @@ def test_empty_node(node_factory, bitcoind):
         l1.rpc.bkpr_inspect('wallet')
 
 
-def test_rebalance_tracking(node_factory, bitcoind):
+def test_rebalance_tracking(node_factory, bitnetd):
     """
     We identify rebalances (invoices paid and received by our node),
     this allows us to filter them out of "incomes" (self-transfers are not income/exp)

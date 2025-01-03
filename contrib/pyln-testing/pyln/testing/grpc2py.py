@@ -65,7 +65,7 @@ def getinfo2py(m):
         "num_peers": m.num_peers,  # PrimitiveField in generate_composite
         "num_pending_channels": m.num_pending_channels,  # PrimitiveField in generate_composite
         "version": m.version,  # PrimitiveField in generate_composite
-        "warning_bitcoind_sync": m.warning_bitcoind_sync,  # PrimitiveField in generate_composite
+        "warning_bitnetd_sync": m.warning_bitnetd_sync,  # PrimitiveField in generate_composite
         "warning_lightningd_sync": m.warning_lightningd_sync,  # PrimitiveField in generate_composite
     })
 

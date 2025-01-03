@@ -1,6 +1,6 @@
 # NOTE: For detailed documentation, refer to https://docs.corelightning.org/docs/writing-json-schemas.
-# NOTE: Set the test `TIMEOUT` to greater than 3 seconds to prevent failures caused by waiting on the bitcoind response.
-# The `dev-bitcoind-poll` interval is 3 seconds, so a shorter timeout may result in test failures.
+# NOTE: Set the test `TIMEOUT` to greater than 3 seconds to prevent failures caused by waiting on the bitnetd response.
+# The `dev-bitnetd-poll` interval is 3 seconds, so a shorter timeout may result in test failures.
 # NOTE: Different nodes are selected to record examples based on data availability, quality, and volume.
 # For example, node `l1` is used to capture examples for `listsendpays`, whereas node `l2` is utilized for `listforwards`.
 
@@ -429,7 +429,7 @@ def update_example(node, method, params, response=None, description=None):
     return response
 
 
-def setup_test_nodes(node_factory, bitcoind):
+def setup_test_nodes(node_factory, bitnetd):
     """Sets up six test nodes for various transaction scenarios:
         l1, l2, l3 for transactions and forwards
         l4 for complex transactions (sendpayment, keysend, renepay)
@@ -460,7 +460,7 @@ def setup_test_nodes(node_factory, bitcoind):
                 'allow_bad_gossip': True,
                 'log-level': 'debug',
                 'broken_log': '.*',
-                'dev-bitcoind-poll': 3,    # Default 1; increased to avoid rpc failures
+                'dev-bitnetd-poll': 3,    # Default 1; increased to avoid rpc failures
             }.copy()
             for i in range(6)
         ]
@@ -469,8 +469,8 @@ def setup_test_nodes(node_factory, bitcoind):
         # Write the data/p2sh_wallet_hsm_secret to the hsm_path, so node can spend funds at p2sh_wrapped_addr
         p2sh_wrapped_addr = '2N2V4ee2vMkiXe5FSkRqFjQhiS9hKqNytv3'
         update_example(node=l1, method='upgradewallet', params={})
-        txid = bitcoind.rpc.sendtoaddress(p2sh_wrapped_addr, 20000000 / 10 ** 8)
-        bitcoind.generate_block(1)
+        txid = bitnetd.rpc.sendtoaddress(p2sh_wrapped_addr, 20000000 / 10 ** 8)
+        bitnetd.generate_block(1)
         l1.daemon.wait_for_log('Owning output .* txid {} CONFIRMED'.format(txid))
         # Doing it with 'reserved ok' should have 1. We use a big feerate so we can get over the RBF hump
         upgrade_res2 = update_example(node=l1, method='upgradewallet', params={'feerate': 'urgent', 'reservedok': True})
@@ -489,7 +489,7 @@ def setup_test_nodes(node_factory, bitcoind):
         c23, c23res = l2.fundchannel(l3, FUND_CHANNEL_AMOUNT_SAT)
         c34, c34res = l3.fundchannel(l4, FUND_CHANNEL_AMOUNT_SAT)
         c25, c25res = l2.fundchannel(l5, announce_channel=False)
-        mine_funding_to_announce(bitcoind, [l1, l2, l3, l4])
+        mine_funding_to_announce(bitnetd, [l1, l2, l3, l4])
         l1.wait_channel_active(c12)
         l1.wait_channel_active(c23)
         l1.wait_channel_active(c34)
@@ -540,7 +540,7 @@ def setup_test_nodes(node_factory, bitcoind):
         raise
 
 
-def generate_transactions_examples(l1, l2, l3, l4, l5, c25, bitcoind):
+def generate_transactions_examples(l1, l2, l3, l4, l5, c25, bitnetd):
     """Generate examples for various transactions and forwards"""
     try:
         logger.info('Simple Transactions Start...')
@@ -609,8 +609,8 @@ def generate_transactions_examples(l1, l2, l3, l4, l5, c25, bitcoind):
         close_res1 = update_example(node=l2, method='close', params={'id': l3.info['id'], 'unilateraltimeout': 1})
         address_l41 = l4.rpc.newaddr()
         close_res2 = update_example(node=l3, method='close', params={'id': l4.info['id'], 'destination': address_l41['bech32']})
-        bitcoind.generate_block(1)
-        sync_blockheight(bitcoind, [l1, l2, l3, l4])
+        bitnetd.generate_block(1)
+        sync_blockheight(bitnetd, [l1, l2, l3, l4])
 
         # Channel 2 to 3 is closed, l1->l3 payment will fail where `failed` forward will be saved on l2
         l1.rpc.sendpay(route_l1_l3, inv_l34['payment_hash'], payment_secret=inv_l34['payment_secret'])
@@ -620,7 +620,7 @@ def generate_transactions_examples(l1, l2, l3, l4, l5, c25, bitcoind):
         # Reopen channels for further examples
         c23_2, c23res2 = l2.fundchannel(l3, FUND_CHANNEL_AMOUNT_SAT)
         c34_2, c34res2 = l3.fundchannel(l4, FUND_CHANNEL_AMOUNT_SAT)
-        mine_funding_to_announce(bitcoind, [l3, l4])
+        mine_funding_to_announce(bitnetd, [l3, l4])
         l2.wait_channel_active(c23_2)
         update_example(node=l2, method='setchannel', params={'id': c23_2, 'ignorefeelimits': True})
         update_example(node=l2, method='setchannel', params={'id': c25, 'feebase': 4000, 'feeppm': 300, 'enforcedelay': 0})
@@ -1079,7 +1079,7 @@ def generate_askrene_examples(l1, l2, l3, c12, c23_2):
         raise
 
 
-def generate_wait_examples(l1, l2, bitcoind, executor):
+def generate_wait_examples(l1, l2, bitnetd, executor):
     """Generates wait examples"""
     try:
         logger.info('Wait Start...')
@@ -1134,12 +1134,12 @@ def generate_wait_examples(l1, l2, bitcoind, executor):
         # Wait blockheight
         curr_blockheight = l2.rpc.getinfo()['blockheight']
         if curr_blockheight < 130:
-            bitcoind.generate_block(130 - curr_blockheight)
-            sync_blockheight(bitcoind, [l2])
+            bitnetd.generate_block(130 - curr_blockheight)
+            sync_blockheight(bitnetd, [l2])
         update_example(node=l2, method='waitblockheight', params={'blockheight': 126}, description=[f'This will return immediately since the current blockheight exceeds the requested waitblockheight.'])
         wbh = executor.submit(l2.rpc.waitblockheight, curr_blockheight + 1, 600)
-        bitcoind.generate_block(1)
-        sync_blockheight(bitcoind, [l2])
+        bitnetd.generate_block(1)
+        sync_blockheight(bitnetd, [l2])
         wbhres = wbh.result(5)
         update_example(node=l2, method='waitblockheight', params={'blockheight': curr_blockheight + 1, 'timeout': 600}, response=wbhres, description=[f'This will return after the next block is mined because requested waitblockheight is one block higher than the current blockheight.'])
         REPLACE_RESPONSE_VALUES.extend([
@@ -1165,7 +1165,7 @@ def generate_wait_examples(l1, l2, bitcoind, executor):
         raise
 
 
-def generate_utils_examples(l1, l2, l3, l4, l5, l6, c23_2, c34_2, inv_l11, inv_l22, rune_l21, bitcoind):
+def generate_utils_examples(l1, l2, l3, l4, l5, l6, c23_2, c34_2, inv_l11, inv_l22, rune_l21, bitnetd):
     """Generates other utilities examples"""
     try:
         logger.info('General Utils Start...')
@@ -1199,14 +1199,14 @@ def generate_utils_examples(l1, l2, l3, l4, l5, l6, c23_2, c34_2, inv_l11, inv_l
         address_l22 = update_example(node=l2, method='newaddr', params={'addresstype': 'p2tr'})
         withdraw_l21 = update_example(node=l2, method='withdraw', params={'destination': address_l21['bech32'], 'satoshi': 555555})
 
-        bitcoind.generate_block(4, wait_for_mempool=[withdraw_l21['txid']])
-        sync_blockheight(bitcoind, [l2])
+        bitnetd.generate_block(4, wait_for_mempool=[withdraw_l21['txid']])
+        sync_blockheight(bitnetd, [l2])
 
         funds_l2 = l2.rpc.listfunds()
         utxos = [f"{funds_l2['outputs'][2]['txid']}:{funds_l2['outputs'][2]['output']}"]
         example_utxos = ['utxo' + ('02' * 30) + ':1']
         withdraw_l22 = update_example(node=l2, method='withdraw', params={'destination': address_l22['p2tr'], 'satoshi': 'all', 'feerate': '20000perkb', 'minconf': 0, 'utxos': utxos})
-        bitcoind.generate_block(4, wait_for_mempool=[withdraw_l22['txid']])
+        bitnetd.generate_block(4, wait_for_mempool=[withdraw_l22['txid']])
         multiwithdraw_res1 = update_example(node=l2, method='multiwithdraw', params={'outputs': [{l1.rpc.newaddr()['bech32']: '2222000msat'}, {l1.rpc.newaddr()['bech32']: '3333000msat'}]})
         multiwithdraw_res2 = update_example(node=l2, method='multiwithdraw', params={'outputs': [{l1.rpc.newaddr('p2tr')['p2tr']: 1000}, {l1.rpc.newaddr()['bech32']: 1000}, {l2.rpc.newaddr()['bech32']: 1000}, {l3.rpc.newaddr()['bech32']: 1000}, {l3.rpc.newaddr()['bech32']: 1000}, {l4.rpc.newaddr('p2tr')['p2tr']: 1000}, {l1.rpc.newaddr()['bech32']: 1000}]})
         l2.rpc.connect(l4.info['id'], 'localhost', l4.port)
@@ -1241,14 +1241,14 @@ def generate_utils_examples(l1, l2, l3, l4, l5, l6, c23_2, c34_2, inv_l11, inv_l
 
         out_total = Millisatoshi(3000000 * 1000)
         funding = l1.rpc.fundpsbt(satoshi=out_total, feerate=7500, startweight=42)
-        psbt = bitcoind.rpc.decodepsbt(funding['psbt'])
+        psbt = bitnetd.rpc.decodepsbt(funding['psbt'])
         saved_input = psbt['tx']['vin'][0]
         l1.rpc.unreserveinputs(funding['psbt'])
-        psbt = bitcoind.rpc.createpsbt([{'txid': saved_input['txid'],
+        psbt = bitnetd.rpc.createpsbt([{'txid': saved_input['txid'],
                                         'vout': saved_input['vout']}], [])
         out_1_ms = Millisatoshi(funding['excess_msat'])
-        output_psbt = bitcoind.rpc.createpsbt([], [{'bcrt1qeyyk6sl5pr49ycpqyckvmttus5ttj25pd0zpvg': float((out_total + out_1_ms).to_btc())}])
-        fullpsbt = bitcoind.rpc.joinpsbts([funding['psbt'], output_psbt])
+        output_psbt = bitnetd.rpc.createpsbt([], [{'bcrt1qeyyk6sl5pr49ycpqyckvmttus5ttj25pd0zpvg': float((out_total + out_1_ms).to_btc())}])
+        fullpsbt = bitnetd.rpc.joinpsbts([funding['psbt'], output_psbt])
         l1.rpc.reserveinputs(fullpsbt)
         signed_psbt = l1.rpc.signpsbt(fullpsbt)['signed_psbt']
         sendpsbt_res1 = update_example(node=l1, method='sendpsbt', params={'psbt': signed_psbt})
@@ -1311,7 +1311,7 @@ def generate_utils_examples(l1, l2, l3, l4, l5, l6, c23_2, c34_2, inv_l11, inv_l
         raise
 
 
-def generate_splice_examples(node_factory, bitcoind):
+def generate_splice_examples(node_factory, bitnetd):
     """Generates splice related examples"""
     try:
         logger.info('Splice Start...')
@@ -1323,7 +1323,7 @@ def generate_splice_examples(node_factory, bitcoind):
                 'allow-deprecated-apis': True,
                 'allow_bad_gossip': True,
                 'broken_log': '.*',
-                'dev-bitcoind-poll': 3,
+                'dev-bitnetd-poll': 3,
             }.copy()
             for i in range(2)
         ]
@@ -1331,7 +1331,7 @@ def generate_splice_examples(node_factory, bitcoind):
         l7.fundwallet(FUND_WALLET_AMOUNT_SAT)
         l7.rpc.connect(l8.info['id'], 'localhost', l8.port)
         c78, c78res = l7.fundchannel(l8, FUND_CHANNEL_AMOUNT_SAT)
-        mine_funding_to_announce(bitcoind, [l7, l8])
+        mine_funding_to_announce(bitnetd, [l7, l8])
         l7.wait_channel_active(c78)
         chan_id_78 = l7.get_channel_id(l8)
         # Splice
@@ -1344,8 +1344,8 @@ def generate_splice_examples(node_factory, bitcoind):
         signpsbt_res1 = l7.rpc.signpsbt(spupdate2_res1['psbt'])
         spsigned_res1 = update_example(node=l7, method='splice_signed', params={'channel_id': chan_id_78, 'psbt': signpsbt_res1['signed_psbt']})
 
-        bitcoind.generate_block(1)
-        sync_blockheight(bitcoind, [l7])
+        bitnetd.generate_block(1)
+        sync_blockheight(bitnetd, [l7])
         l7.daemon.wait_for_log(' to CHANNELD_NORMAL')
         time.sleep(1)
 
@@ -1384,7 +1384,7 @@ def generate_splice_examples(node_factory, bitcoind):
         raise
 
 
-def generate_channels_examples(node_factory, bitcoind, l1, l3, l4, l5):
+def generate_channels_examples(node_factory, bitnetd, l1, l3, l4, l5):
     """Generates fundchannel and openchannel related examples"""
     try:
         logger.info('Channels Start...')
@@ -1397,7 +1397,7 @@ def generate_channels_examples(node_factory, bitcoind, l1, l3, l4, l5):
                 'allow-deprecated-apis': True,
                 'allow_bad_gossip': True,
                 'broken_log': '.*',
-                'dev-bitcoind-poll': 3,
+                'dev-bitnetd-poll': 3,
             }.copy()
             for i in range(2)
         ]
@@ -1405,7 +1405,7 @@ def generate_channels_examples(node_factory, bitcoind, l1, l3, l4, l5):
 
         amount = 2 ** 24
         l9.fundwallet(amount + 10000000)
-        bitcoind.generate_block(1)
+        bitnetd.generate_block(1)
         wait_for(lambda: len(l9.rpc.listfunds()["outputs"]) != 0)
         l9.rpc.connect(l10.info['id'], 'localhost', l10.port)
 
@@ -1423,8 +1423,8 @@ def generate_channels_examples(node_factory, bitcoind, l1, l3, l4, l5):
         txsend_res1 = update_example(node=l9, method='txsend', params=[tx_prep_2['txid']])
         l9.rpc.close(l10.info['id'])
 
-        bitcoind.generate_block(1)
-        sync_blockheight(bitcoind, [l9])
+        bitnetd.generate_block(1)
+        sync_blockheight(bitnetd, [l9])
 
         amount = 1000000
         fund_start_res3 = l9.rpc.fundchannel_start(l10.info['id'], amount)
@@ -1447,7 +1447,7 @@ def generate_channels_examples(node_factory, bitcoind, l1, l3, l4, l5):
                 'allow-deprecated-apis': True,
                 'allow_bad_gossip': True,
                 'broken_log': '.*',
-                'dev-bitcoind-poll': 3,
+                'dev-bitnetd-poll': 3,
             }.copy()
             for i in range(2)
         ]
@@ -1457,7 +1457,7 @@ def generate_channels_examples(node_factory, bitcoind, l1, l3, l4, l5):
         l11.rpc.connect(l12.info['id'], 'localhost', l12.port)
         c1112res = l11.rpc.fundchannel(l12.info['id'], FUND_CHANNEL_AMOUNT_SAT)
         chan_id = c1112res['channel_id']
-        vins = bitcoind.rpc.decoderawtransaction(c1112res['tx'])['vin']
+        vins = bitnetd.rpc.decoderawtransaction(c1112res['tx'])['vin']
         assert(only_one(vins))
         prev_utxos = ["{}:{}".format(vins[0]['txid'], vins[0]['vout'])]
         example_utxos = ['utxo' + ('01' * 30) + ':1']
@@ -1491,8 +1491,8 @@ def generate_channels_examples(node_factory, bitcoind, l1, l3, l4, l5):
         signed_psbt_2 = update_example(node=l11, method='signpsbt', params=[openchannelupdate_res2['psbt']])
         openchannelsigned_res2 = update_example(node=l11, method='openchannel_signed', params=[chan_id, signed_psbt_2['signed_psbt']])
 
-        bitcoind.generate_block(1)
-        sync_blockheight(bitcoind, [l11])
+        bitnetd.generate_block(1)
+        sync_blockheight(bitnetd, [l11])
         l11.daemon.wait_for_log(' to CHANNELD_NORMAL')
 
         # Fundpsbt, channelopen init, abort, unreserve
@@ -1507,13 +1507,13 @@ def generate_channels_examples(node_factory, bitcoind, l1, l3, l4, l5):
         update_example(node=l11, method='unreserveinputs', params=[psbt_init_res2['psbt']])
 
         # Reserveinputs
-        bitcoind.generate_block(1)
-        sync_blockheight(bitcoind, [l11])
+        bitnetd.generate_block(1)
+        sync_blockheight(bitnetd, [l11])
         outputs = l11.rpc.listfunds()['outputs']
-        psbt_1 = bitcoind.rpc.createpsbt([{'txid': outputs[0]['txid'], 'vout': outputs[0]['output']}], [])
+        psbt_1 = bitnetd.rpc.createpsbt([{'txid': outputs[0]['txid'], 'vout': outputs[0]['output']}], [])
         update_example(node=l11, method='reserveinputs', params={'psbt': psbt_1})
         l11.rpc.unreserveinputs(psbt_1)
-        psbt_2 = bitcoind.rpc.createpsbt([{'txid': outputs[1]['txid'], 'vout': outputs[1]['output']}], [])
+        psbt_2 = bitnetd.rpc.createpsbt([{'txid': outputs[1]['txid'], 'vout': outputs[1]['output']}], [])
         update_example(node=l11, method='reserveinputs', params={'psbt': psbt_2})
         l11.rpc.unreserveinputs(psbt_2)
 
@@ -1684,8 +1684,8 @@ def generate_channels_examples(node_factory, bitcoind, l1, l3, l4, l5):
         l1.rpc.disconnect(l3.info['id'], True)
         l1.rpc.disconnect(l4.info['id'], True)
         l1.rpc.disconnect(l5.info['id'], True)
-        bitcoind.generate_block(1)
-        sync_blockheight(bitcoind, [l1, l3, l4, l5])
+        bitnetd.generate_block(1)
+        sync_blockheight(bitnetd, [l1, l3, l4, l5])
         logger.info('Channels Done!')
     except Exception as e:
         logger.error(f'Error in generating fundchannel and openchannel examples: {e}')
@@ -2036,7 +2036,7 @@ def generate_list_examples(l1, l2, l3, c12, c23_2, inv_l31, inv_l32, offer_l23, 
 
 
 @unittest.skipIf(not GENERATE_EXAMPLES, 'Generates examples for doc/schema/lightning-*.json files.')
-def test_generate_examples(node_factory, bitcoind, executor):
+def test_generate_examples(node_factory, bitnetd, executor):
     """Re-generates examples for doc/schema/lightning-*.json files"""
     try:
         global ALL_RPC_EXAMPLES, REGENERATING_RPCS
@@ -2088,17 +2088,17 @@ def test_generate_examples(node_factory, bitcoind, executor):
         logger.warning(f'This test ignores {len(IGNORE_RPCS_LIST)} rpc methods: {IGNORE_RPCS_LIST}')
         REGENERATING_RPCS = [rpc.strip() for rpc in os.getenv("REGENERATE").split(', ')] if os.getenv("REGENERATE") else ALL_RPC_EXAMPLES
         list_missing_examples()
-        l1, l2, l3, l4, l5, l6, c12, c23, c25 = setup_test_nodes(node_factory, bitcoind)
-        c23_2, c23res2, c34_2, inv_l11, inv_l21, inv_l22, inv_l31, inv_l32, inv_l34 = generate_transactions_examples(l1, l2, l3, l4, l5, c25, bitcoind)
+        l1, l2, l3, l4, l5, l6, c12, c23, c25 = setup_test_nodes(node_factory, bitnetd)
+        c23_2, c23res2, c34_2, inv_l11, inv_l21, inv_l22, inv_l31, inv_l32, inv_l34 = generate_transactions_examples(l1, l2, l3, l4, l5, c25, bitnetd)
         rune_l21 = generate_runes_examples(l1, l2, l3)
         generate_datastore_examples(l2)
         generate_bookkeeper_examples(l2, l3, c23res2['channel_id'])
         offer_l23, inv_req_l1_l22 = generate_offers_renepay_examples(l1, l2, inv_l21, inv_l34)
         generate_askrene_examples(l1, l2, l3, c12, c23_2)
-        generate_wait_examples(l1, l2, bitcoind, executor)
-        address_l22 = generate_utils_examples(l1, l2, l3, l4, l5, l6, c23_2, c34_2, inv_l11, inv_l22, rune_l21, bitcoind)
-        generate_splice_examples(node_factory, bitcoind)
-        generate_channels_examples(node_factory, bitcoind, l1, l3, l4, l5)
+        generate_wait_examples(l1, l2, bitnetd, executor)
+        address_l22 = generate_utils_examples(l1, l2, l3, l4, l5, l6, c23_2, c34_2, inv_l11, inv_l22, rune_l21, bitnetd)
+        generate_splice_examples(node_factory, bitnetd)
+        generate_channels_examples(node_factory, bitnetd, l1, l3, l4, l5)
         generate_autoclean_delete_examples(l1, l2, l3, l4, l5, c12, c23)
         generate_backup_recovery_examples(node_factory, l4, l5, l6)
         generate_list_examples(l1, l2, l3, c12, c23_2, inv_l31, inv_l32, offer_l23, inv_req_l1_l22, address_l22)

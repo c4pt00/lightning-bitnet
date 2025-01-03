@@ -116,39 +116,39 @@ This is not valid within the per-network configuration file.
 
   Alias for *network=signet*.
 
-* **bitcoin-cli**=*PATH* [plugin `bcli`]
+* **bitnet-cli**=*PATH* [plugin `bcli`]
 
-  The name of *bitcoin-cli* executable to run.
+  The name of *bitnet-cli* executable to run.
 
 * **bitcoin-datadir**=*DIR* [plugin `bcli`]
 
-  *-datadir* argument to supply to bitcoin-cli(1).
+  *-datadir* argument to supply to bitnet-cli(1).
 
 * **bitcoin-rpcuser**=*USER* [plugin `bcli`]
 
-  The RPC username for talking to bitcoind(1).
+  The RPC username for talking to bitnetd(1).
 
 * **bitcoin-rpcpassword**=*PASSWORD* [plugin `bcli`]
 
-  The RPC password for talking to bitcoind(1).
+  The RPC password for talking to bitnetd(1).
 
 * **bitcoin-rpcconnect**=*HOST* [plugin `bcli`]
 
-  The bitcoind(1) RPC host to connect to.
+  The bitnetd(1) RPC host to connect to.
 
 * **bitcoin-rpcport**=*PORT* [plugin `bcli`]
 
-  The bitcoind(1) RPC port to connect to.
+  The bitnetd(1) RPC port to connect to.
 
 * **bitcoin-rpcclienttimeout**=*SECONDS* [plugin `bcli`]
 
-  The bitcoind(1) RPC client timeout in seconds. Default is set to 60
+  The bitnetd(1) RPC client timeout in seconds. Default is set to 60
 instead of 900 to match bitcoin-retry-timeout default. When set
 explicitly, the higher value of it and bitcoin-retry-timeout is used.
 
 * **bitcoin-retry-timeout**=*SECONDS* [plugin `bcli`]
 
-  Number of seconds to keep trying a bitcoin-cli(1) command. If the
+  Number of seconds to keep trying a bitnet-cli(1) command. If the
 command keeps failing after this time, exit with a fatal error.
 
 * **rescan**=*BLOCKS*
@@ -391,7 +391,7 @@ usually treat them as the minimum (253 sats/kw) if we can't get them.
 This allows override of one or more of our standard feerates (see
 lightning-feerates(7)).  Up to 5 values, separated by '/' can be
 provided: if fewer are provided, then the final value is used for the
-remainder.  The values are in per-kw (roughly 1/4 of bitcoind's per-kb
+remainder.  The values are in per-kw (roughly 1/4 of bitnetd's per-kb
 values), and the order is "opening", "mutual\_close", "unilateral\_close",
 "delayed\_to\_us", "htlc\_resolution", and "penalty".
 
